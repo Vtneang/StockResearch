@@ -98,7 +98,7 @@ class main:
 			print("That stock is already in the system")
 			reply = input("Would you like to update it? [Y/N]")
 			if reply == "Y":
-				print("Not available ATM")
+				self.add_by_abbrv(abbrv)
 			else:
 				return
 		else:
@@ -122,7 +122,7 @@ class main:
 
 
 	# Get name thru the abbrv link RETURNS a STRING(NAME)
-	def get_name(soup):
+	def get_name(self, soup):
 		try:
 			title = soup.find("div", {"class" : self.stock_name_access}).find_all("h1")
 		except AttributeError:
@@ -136,7 +136,7 @@ class main:
 
 	# Get's the updated info of a stock by the soup content
 	# RETURNS A LIST: [PRICE, VALUE CHANGE, PERECENT CHANGE, TIME]
-	def get_data(soup):
+	def get_data(self, soup):
 		try:
 			trial = soup.find("div", {"class" : self.stock_data_access}).find_all("span")
 		except AttributeError:
@@ -259,9 +259,19 @@ class main:
 				print(stock.nick + " doesn't have a price?" + stock.cur_price)
 		return total/len(self.Stocks)
 
+	# Attempt to check that the day storing is correct
 	def checking_day_storage(self):
 		print(len(self.Stocks_day_data["05/16/2020"]))
 		print(self.Stocks_day_data["05/16/2020"]["CVX"])
+
+	#Adding stocks from names to the system
+	def add_all(self):
+		for sym in self.listings():
+			try:
+				self.add_by_abbrv(sym, False)
+			except:
+				print("Failed to add: " + sym)
+		self.storing()
 
 	# Getting some stock symbols from the package
 	#def get_names(self):
@@ -283,18 +293,9 @@ class main:
 	#	self.names = new_names
 	#	self.storing()
 
-	# Adding stocks from names to the system
-	#def add_all(self):
-	#	for sym in self.names:
-	#		try:
-	#			self.add_by_abbrv(sym, False)
-	#		except:
-	#			print("Failed to add: " + sym)
-
 
 ############ TESTING COMMANDS ###########
 
-
-test = main()
-test.checking_day_storage()
+tet = main()
+tet.day_storage()
 

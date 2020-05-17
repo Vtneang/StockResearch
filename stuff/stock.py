@@ -1,3 +1,5 @@
+import datetime
+
 class stock:
 
 	# Initializer with:
@@ -9,7 +11,7 @@ class stock:
 		self.cur_price = price
 		self.percent_change = percent
 		self.price_change = diff
-		self.updated = time
+		self.updated = time + " EST " + datetime.datetime.now().strftime("%m/%d/%Y")
 
 	def __repr__(self):
 		return "Stock data of " + self.name
