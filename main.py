@@ -7,6 +7,7 @@ import pickle
 from datapackage import Package 
 import os
 import datetime
+import threading
 
 class main:
 
@@ -181,6 +182,16 @@ class main:
 			self.add_by_abbrv(i, False)
 		self.storing()
 
+	def fast_update(self):
+		threads = []
+		for i in range(10):
+			threads.append(myThread(i, self.listings()))
+		for t in threads:
+			t.start()
+		for t_wait in threads:
+			t_wait.join()
+		self.storing()
+
 	# Attempt to store data as a file
 	def storing(self):
 		with open(self.stocks_saved, "wb") as main_file:
@@ -294,8 +305,32 @@ class main:
 	#	self.storing()
 
 
+################### THREADING CLASS ###################
+
+class myThread (threading.Thread):
+
+	cur_threads = 0
+
+	def __init__(self, threadID, listings):
+		threading.Thread.__init__(self)
+		self.ID = threadID
+		self.listings = listings
+		myThread.cur_threads += 1
+
+	# STORAGE is the list of all abbrvs in main.stocks
+	# Helps run each thread to match it's own ID
+	def run(self):
+		print("Starting Thread " + str(self.ID))
+		count = self.ID
+		while count < len(self.listings):
+			stock = self.listings[count]
+			main.add_by_abbrv(main, stock)
+			count += myThread.cur_threads
+
+
+
 ############ TESTING COMMANDS ###########
 
 tet = main()
-tet.day_storage()
+tet.fast_update()
 
