@@ -30,7 +30,8 @@ class main:
 	Stocks = {} # Main dictionary of all stocks
 	s_Price = [] # List of [price, abbrv] for every stock
 	active = True # Change to True for wanting input on system
-	t_num = 15 # number of threads for updating the system
+	t_num = 10 # number of threads for updating the system
+	update_num = 0
 
 	# Saving directories/file names
 	storing_dir = os.getcwd() + "/saved_data/"
@@ -132,31 +133,33 @@ class main:
 	def get_name(soup):
 		try:
 			title = soup.find("div", {"class" : main.stock_name_access}).find_all("h1")
+			name = ""
+			for i in title:
+				for j in i.text.split():
+					if re.match("[A-Z]{1}[a-z]+", j):
+						name += j + " "
+			return name.strip()
 		except AttributeError:
+			print("Failed name reqs")
 			return ""
-		name = ""
-		for i in title:
-			for j in i.text.split():
-				if re.match("[A-Z]{1}[a-z]+", j):
-					name += j + " "
-		return name.strip()
 
 	# Get's the updated info of a stock by the soup content
 	# RETURNS A LIST: [PRICE, VALUE CHANGE, PERECENT CHANGE, TIME]
 	def get_data(soup):
 		try:
 			trial = soup.find("div", {"class" : main.stock_data_access}).find_all("span")
+			count = 0
+			results = []
+			for i in trial:
+				for j in i.text.split():
+					j = re.sub("[(,)]", "", j)
+					if count < 4 and (re.match(main.stock_float_pattern, j) or re.match(main.stock_time_pattern, j)): #Set to 4 so I don't get Pre/Post Market
+						count += 1
+						results.append(j)
+			return results
 		except AttributeError:
+			print("Failed data reqs")
 			return "fail"
-		count = 0
-		results = []
-		for i in trial:
-			for j in i.text.split():
-				j = re.sub("[(,)]", "", j)
-				if count < 4 and (re.match(main.stock_float_pattern, j) or re.match(main.stock_time_pattern, j)): #Set to 4 so I don't get Pre/Post Market
-					count += 1
-					results.append(j)
-		return results
 
 
 	#################### ADDING/STORING DATA ####################
@@ -176,8 +179,10 @@ class main:
 			name = main.Stocks[abbrv].name
 		data = main.get_data(soup)
 		if data != "fail":
+			main.update_num += 1
 			addition = stock(name, abbrv, data[0], data[1], data[2], data[3])
 			main.Stocks[addition.nick] = addition
+			print(main.update_num)
 			if store:
 				main.storing()
 
@@ -225,11 +230,17 @@ class main:
 		except FileNotFoundError:
 			print("Files haven't been made yet")
 
-	# sort by the prices of Stocks and store in s_Price
-	def sort_price():
+	# sort by the NEEDED of Stocks and store in s_Price (cur_price, price_change, percent_change)
+	def sort(needed):
 		for s in main.listings():
-			price = float(main.Stocks[s].cur_price)
-			key = [price, s]
+			if needed == "cur_price":
+				want = float(main.Stocks[s].cur_price)
+			elif needed == "percent_change":
+				data = main.Stocks[s].percent_change
+				want = float(data.replace("%", ""))
+			else:
+				want = float(main.Stocks[s].price_change)
+			key = [want, s]
 			main.s_Price.append(key)
 		main.s_Price = main.quicksorter(main.s_Price)
 		main.storing()
@@ -324,11 +335,12 @@ class main:
 				print("Failed to add: " + sym)
 		main.storing()
 
-	def check_sort():
-		count = 1980
-		while count > 1970:
-			print(str(main.s_Price[count]))
-			count -= 1
+	# START: starting index of sort, CHANGER: 1 or -1 for increase/decrease, NUM = number of prints
+	def check_sort(start, num, changer):
+		while num:
+			print(str(main.s_Price[start]))
+			num -= 1
+			start += changer
 
 	# Getting some stock symbols from the package
 	#def get_names():
@@ -355,13 +367,10 @@ class main:
 
 class myThread (threading.Thread):
 
-	cur_threads = 0
-
 	def __init__(self, threadID, listings):
 		threading.Thread.__init__(self)
 		self.ID = threadID
 		self.listings = listings
-		myThread.cur_threads += 1
 
 	# STORAGE is the list of all abbrvs in main.stocks
 	# Helps run each thread to match it's own ID
@@ -371,14 +380,13 @@ class myThread (threading.Thread):
 		while count < len(self.listings):
 			stock = self.listings[count]
 			main.add_by_abbrv(stock, False)
-			count += myThread.cur_threads
+			count += main.t_num
+		print("Ending Thread: " + str(self.ID))
 
 
 
 ############ TESTING COMMANDS ###########
 
 if __name__ == "__main__":
-	#test = main()
-	#main.check_sort()
-	main()
-
+	test = main()
+	main.day_storage()
