@@ -1,13 +1,11 @@
-class testing:
-	def __init__(self):
-		testing.printer("pp")
-		testing.hater("h8")
+master = []
 
-	def printer(st):
-		print(st)
+key = [12.20, "CVX"]
+left = []
+right = [[]]
+print(len(left))
+left.extend(right)
+left.append(key)
+print(str(left))
 
-	def hater(self, mes):
-		print(mes)
-
-
-testing()
+print(str([] + [[12,12]] + [[19,19]]))
