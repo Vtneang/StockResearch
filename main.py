@@ -29,8 +29,8 @@ class main:
 	Stocks_day_data = {} # Dictionary keeping track of the date to 
 	Stocks = {} # Main dictionary of all stocks
 	s_Price = [] # List of [price, abbrv] for every stock
-	active = True # Change to True for wanting input on system
-	t_num = 10 # number of threads for updating the system
+	active = False # Change to True for wanting input on system
+	t_num = 5 # number of threads for updating the system
 	update_num = 0
 
 	# Saving directories/file names
@@ -323,8 +323,8 @@ class main:
 
 	# Attempt to check that the day storing is correct
 	def checking_day_storage():
-		print(len(main.Stocks_day_data["05/16/2020"]))
-		print(main.Stocks_day_data["05/16/2020"]["CVX"])
+		print(str(main.Stocks_day_data.keys()))
+		print(main.Stocks_day_data["05/18/2020"]["CVX"])
 
 	#Adding stocks from names to the system
 	def add_all():
