@@ -389,4 +389,5 @@ class myThread (threading.Thread):
 
 if __name__ == "__main__":
 	test = main()
+	main.fast_update()
 	main.day_storage()
