@@ -1,4 +1,5 @@
 from stuff import stock
+from stuff import mySorts
 import urllib.request
 import requests
 from bs4 import BeautifulSoup
@@ -26,9 +27,10 @@ class main:
 	commands = ["add","admin", "check", "listings", "update", "help", "exit", "delete"]
 	admin_comm = ["store"]
 
-	Stocks_day_data = {} # Dictionary keeping track of the date to 
+	Stocks_day_data = {} # Dictionary keeping track of the date to now
+	Sorts_day_data = {} # Dictionary keeping track of sorted data
 	Stocks = {} # Main dictionary of all stocks
-	s_Price = [] # List of [price, abbrv] for every stock
+	sorties = mySorts([[]],[[]],[[]]) # Keeps tracks of the sorts done
 	active = False # Change to True for wanting input on system
 	t_num = 5 # number of threads for updating the system
 	update_num = 0
@@ -37,7 +39,7 @@ class main:
 	storing_dir = os.getcwd() + "/saved_data/"
 	stocks_saved = storing_dir + "Stocks"
 	other_saved = storing_dir + "Other"
-	price_saved = storing_dir + "Price"
+	sorts_saved = storing_dir + "Sorts"
 
 
 	#################### INITIALIZATION STEPS ####################
@@ -208,14 +210,16 @@ class main:
 		print("STORING DATA...")
 		with open(main.stocks_saved, "wb") as main_file:
 			pickle.dump(main.Stocks, main_file)
-		with open(main.price_saved, "wb") as price_file:
-			pickle.dump(main.s_Price, price_file)
+		with open(main.sorts_saved, "wb") as price_file:
+			pickle.dump(main.sorties, price_file)
 
 	def day_storage():
 		date = datetime.datetime.now().strftime("%m/%d/%Y")
+		main.Sorts_day_data[date] = main.sorties
 		main.Stocks_day_data[date] = main.Stocks
 		with open(main.other_saved, "wb") as other_file:
 			pickle.dump(main.Stocks_day_data, other_file)
+			pickle.dump(main.Sorts_day_data, other_file)
 
 	# Loading data from past save files
 	def loading():
@@ -225,38 +229,50 @@ class main:
 			print("Loaded data of " + str(len(main.Stocks)) + " stocks!")
 			with open(main.other_saved, "rb") as other_file:
 				main.Stocks_day_data = pickle.load(other_file)
-			with open(main.price_saved, "rb") as price_file:
-				main.s_Price = pickle.load(price_file)
+				main.Sorts_day_data = pickle.load(other_file)
+			with open(main.sorts_saved, "rb") as price_file:
+				main.sorties = pickle.load(price_file)
 		except FileNotFoundError:
 			print("Files haven't been made yet")
 
+	def sort_all():
+		pert_change = main.sort("percent_change")
+		p_change = main.sort("price_change")
+		cur_p = main.sort("cur_price")
+		main.sorties = mySorts(p_change, pert_change, cur_p)
+		main.storing()
+
 	# sort by the NEEDED of Stocks and store in s_Price (cur_price, price_change, percent_change)
 	def sort(needed):
+		values = []
 		for s in main.listings():
 			if needed == "cur_price":
-				want = float(main.Stocks[s].cur_price)
+				data = main.Stocks[s].cur_price
 			elif needed == "percent_change":
-				data = main.Stocks[s].percent_change
-				want = float(data.replace("%", ""))
+				data = main.Stocks[s].percent_change.replace("%", "")
+			elif needed == "price_change":
+				data = main.Stocks[s].price_change
 			else:
-				want = float(main.Stocks[s].price_change)
+				print("Invalid Sorting Command Issued")
+				return
+			want = float(data)
 			key = [want, s]
-			main.s_Price.append(key)
-		main.s_Price = main.quicksorter(main.s_Price)
-		main.storing()
+			values.append(key)
+		return main.quicksorter(values)
 
 	# An attempt at quick sorting data!
 	def quicksorter(data):
-		if len(data) == 1 or len(data) == 0:
+		if len(data) <= 1:
 			return data
-		partition = data[0]
+		partition = data[0][0]
 		left = []
 		right = []
 		keep = []
 		for stock in data:
-			if stock == partition or stock[0] == partition[0]:
+			num = stock[0]
+			if num == partition:
 				keep.append(stock)
-			elif stock[0] < partition[0]:
+			elif num < partition:
 				left.append(stock)
 			else:
 				right.append(stock)
@@ -323,8 +339,9 @@ class main:
 
 	# Attempt to check that the day storing is correct
 	def checking_day_storage():
-		print(str(main.Stocks_day_data.keys()))
-		print(main.Stocks_day_data["05/18/2020"]["CVX"])
+		#print(str(main.Stocks_day_data.keys()))
+		#print(main.Stocks_day_data["05/24/2020"]["CVX"])
+		main.check_sort(0, 10, 1, "Per_change")
 
 	#Adding stocks from names to the system
 	def add_all():
@@ -335,10 +352,31 @@ class main:
 				print("Failed to add: " + sym)
 		main.storing()
 
-	# START: starting index of sort, CHANGER: 1 or -1 for increase/decrease, NUM = number of prints
-	def check_sort(start, num, changer):
+	# START: starting index of sort, 
+	# CHANGER: 1 or -1 for increase/decrease, 
+	# NUM = number of prints
+	# Desire = get(P_change, Per_change, Cur_price) from mySorts class
+	def check_sort(start, num, changer, desire):
+		message = "Here is the "
+		if start == len(main.listings()):
+			message += "top "
+		elif start == 0:
+			message += "bottom "
+		if desire == "P_change":
+			message += str(num) + " Price Changes today!"
+			wanted = main.sorties.getP_change()
+		elif desire == "Per_change":
+			message += str(num) + " Percent Changes today!"
+			wanted = main.sorties.getPer_change()
+		elif desire == "Cur_price":
+			message += str(num) + " Current Prices today!"
+			wanted = main.sorties.getCur_price()
+		else:
+			print("Need a new DESIRE please")
+			return
+		print(message)
 		while num:
-			print(str(main.s_Price[start]))
+			print(str(wanted[start]))
 			num -= 1
 			start += changer
 
@@ -383,11 +421,8 @@ class myThread (threading.Thread):
 			count += main.t_num
 		print("Ending Thread: " + str(self.ID))
 
-
-
 ############ TESTING COMMANDS ###########
 
 if __name__ == "__main__":
 	test = main()
-	main.fast_update()
-	main.day_storage()
+	main.checking_day_storage()

@@ -1,11 +1,28 @@
-master = []
+import random
 
-key = [12.20, "CVX"]
-left = []
-right = [[]]
-print(len(left))
-left.extend(right)
-left.append(key)
-print(str(left))
+idk = []
 
-print(str([] + [[12,12]] + [[19,19]]))
+for i in range(10000):
+	idk.append([random.randint(0,10000), "CVX"])
+
+
+def quicksort(A):
+	if len(A) <= 1:
+		return A
+	lower = []
+	higher = []
+	cur = []
+	for l in A:
+		num = l[0]
+		if num < A[0][0]:
+			lower.append(l)
+		elif num > A[0][0]:
+			higher.append(l)
+		else:
+			cur.append(l)
+	left = quicksort(lower)
+	right = quicksort(higher)
+	cur.append(A[0])
+	return left + cur + right
+
+print(quicksort(idk))

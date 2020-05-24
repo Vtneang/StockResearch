@@ -40,7 +40,7 @@ class stock:
 	# (Last Updated) Change of Percent/Price
 	def change(self):
 		pert_change = "% Change of " + self.nick + " is: " + self.percent_change + "."
-		value_change = "$ Change of " + self.nick + " is: " + self.price_change + "."
+		value_change = "$ Change of " + self.nick + " is: " + self.price_change  + "."
 		result = value_change + "\n" + pert_change
 		return result
 
