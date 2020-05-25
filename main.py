@@ -4,7 +4,7 @@ import urllib.request
 import requests
 from bs4 import BeautifulSoup
 import re
-import pickle
+import pickle # Just do frist in first out type of storage?
 from datapackage import Package 
 import os
 import datetime
@@ -27,19 +27,21 @@ class main:
 	commands = ["add","admin", "check", "listings", "update", "help", "exit", "delete"]
 	admin_comm = ["store"]
 
-	Stocks_day_data = {} # Dictionary keeping track of the date to now
-	Sorts_day_data = {} # Dictionary keeping track of sorted data
-	Stocks = {} # Main dictionary of all stocks
-	sorties = mySorts([[]],[[]],[[]]) # Keeps tracks of the sorts done
-	active = False # Change to True for wanting input on system
-	t_num = 5 # number of threads for updating the system
-	update_num = 0
+	Stocks_day_data = {} 				# Dictionary keeping track of the date to now
+	Sorts_day_data = {} 				# Dictionary keeping track of sorted data
+	Stocks = {} 						# Main dictionary of all stocks
+	sorties = mySorts([[]],[[]],[[]]) 	# Keeps tracks of the sorts done
+	active = False 						# Change to True for wanting input on system
+	t_num = 5 							# number of threads for updating the system
+	update_num = 0						# FOR DEBUGGING USE OF COUNTING STOCK DATA RETRIEVAL
+	user_tracks = [] 					# Tracks a list of stocks that the user wants
 
 	# Saving directories/file names
-	storing_dir = os.getcwd() + "/saved_data/"
-	stocks_saved = storing_dir + "Stocks"
-	other_saved = storing_dir + "Other"
-	sorts_saved = storing_dir + "Sorts"
+	storing_dir = os.getcwd() + "/saved_data/"  # Main Storage directory file
+	stocks_saved = storing_dir + "Stocks"		# Storage for stocks in the system
+	other_saved = storing_dir + "Other"			# Storage for end of day stocks/sorting lists
+	sorts_saved = storing_dir + "Sorts"			# Storage for current time sorting
+	user_saved = storing_dir + "User_data"		# Storage for user tracked stocks
 
 
 	#################### INITIALIZATION STEPS ####################
@@ -73,7 +75,7 @@ class main:
 				main.admin_check()
 			elif action == "update":
 				print("This gonna take around 45ish minutes...")
-				main.update()
+				main.fast_update()
 			elif action == "help":
 				main.help()
 			elif action == "listings":
@@ -126,6 +128,33 @@ class main:
 	# Prints all the valid actions!
 	def help():
 		print("The valid commands are: " + str(main.commands))
+
+	# Prints all abbrevations of stocks the user is tracking
+	def tracking():
+		print("You are currently tracking:")
+		for abbrv in main.user_tracks:
+			print(main.Stocks[abbrv])
+
+	# Adds the abbreviation to user_tracks if it's in the system
+	def track(abbrv):
+		if abbrv in main.user_tracks:
+			print("Already tracking " + abbrv)
+		elif abbrv not in main.listings():
+			print("That stocks isn't in the system!")
+		else:
+			main.user_tracks.append(abbrv)
+			main.storing()
+			print("Added " + abbrv + " to the watchlist")
+
+	# Updates the stocks in WATCHLIST to current time
+	def update_watchlist():
+		main.fast_update(main.user_tracks)
+
+	def stop_watching(abbrv):
+		try:
+			main.user_tracks.remove(abbrv)
+		except ValueError:
+			print("You already aren't watching " + abbrv)
 
 
 	#################### HELPER FUNCTIONS ####################
@@ -188,17 +217,12 @@ class main:
 			if store:
 				main.storing()
 
-	#Updating the stocks in the sytem and storing
-	def update():
-		print("This gonna take a while :(")
-		for i in main.Stocks.keys():
-			main.add_by_abbrv(i, False)
-		main.storing()
-
-	def fast_update():
+	def fast_update(stuff=[]):
+		if stuff == []:
+			stuff = main.listings()
 		threads = []
 		for i in range(main.t_num):
-			threads.append(myThread(i, main.listings()))
+			threads.append(myThread(i, stuff))
 		for t in threads:
 			t.start()
 		for t_wait in threads:
@@ -212,6 +236,8 @@ class main:
 			pickle.dump(main.Stocks, main_file)
 		with open(main.sorts_saved, "wb") as price_file:
 			pickle.dump(main.sorties, price_file)
+		with open(main.user_saved, "wb") as user_file:
+			pickle.dump(main.user_tracks, user_file)
 
 	def day_storage():
 		date = datetime.datetime.now().strftime("%m/%d/%Y")
@@ -232,8 +258,14 @@ class main:
 				main.Sorts_day_data = pickle.load(other_file)
 			with open(main.sorts_saved, "rb") as price_file:
 				main.sorties = pickle.load(price_file)
+			with open(main.user_saved, "rb") as user_file:
+				main.user_tracks = pickle.load(user_file)
 		except FileNotFoundError:
 			print("Files haven't been made yet")
+
+
+	#################### SORTING DATA ####################
+
 
 	def sort_all():
 		pert_change = main.sort("percent_change")
@@ -280,6 +312,57 @@ class main:
 		real_r = main.quicksorter(right)
 		return real_l + keep + real_r
 
+
+	################### ORGANIZING/ACQUIRING DATA ###################
+	
+	# Attempts to returns MYSORTS CLASS by checking if DAY is valid
+	# DAY = mm/dd/yyyy format (starting 05/24/2020)
+	def get_by_date(day):
+		try:
+			return main.Sorts_day_data[day]
+		except KeyError:
+			print("Invalid date")
+
+	# Checks the top/bottom amount of stocks of a specified attribute
+	# START: starting index of sort, either 0 or 1980
+	# CHANGER: 1 if 0 == START  or -1 if START == 1980
+	# NUM = number of stocks wanted
+	# Desire = get(P_change, Per_change, Cur_price) from mySorts class
+	# Specified DAY (mm/dd/yyyy) for data retrieval
+	def check_sort(start, num, changer, desire, day):
+		message = "Here is the "
+		data = main.get_by_date(day)
+		if not data:
+			return
+		if start == len(main.listings()) - 1:
+			message += "top "
+		elif start == 0:
+			message += "bottom "
+		if desire == "P_change":
+			message += str(num) + " Price Changes today!"
+			wanted = data.getP_change()
+		elif desire == "Per_change":
+			message += str(num) + " Percent Changes today!"
+			wanted = data.getPer_change()
+		elif desire == "Cur_price":
+			message += str(num) + " Current Prices today!"
+			wanted = data.getCur_price()
+		else:
+			print("Need a new DESIRE please")
+			return
+		print(message)
+		while num:
+			print(str(wanted[start]))
+			num -= 1
+			start += changer
+
+	# Returns the specified STOCK on the specified day (mm/dd/yyyy)
+	def specified_stock(abbrv, day): 
+		try:
+			data = main.Stocks_day_data[day]
+			return data[abbrv]
+		except KeyError:
+			print("\nInvalid Stock or Date: Stocks found :")
 	#################### DEBUGGING/RANDO STATS STUFF ####################
 
 	# checking for acces to do other stuff
@@ -352,34 +435,6 @@ class main:
 				print("Failed to add: " + sym)
 		main.storing()
 
-	# START: starting index of sort, 
-	# CHANGER: 1 or -1 for increase/decrease, 
-	# NUM = number of prints
-	# Desire = get(P_change, Per_change, Cur_price) from mySorts class
-	def check_sort(start, num, changer, desire):
-		message = "Here is the "
-		if start == len(main.listings()):
-			message += "top "
-		elif start == 0:
-			message += "bottom "
-		if desire == "P_change":
-			message += str(num) + " Price Changes today!"
-			wanted = main.sorties.getP_change()
-		elif desire == "Per_change":
-			message += str(num) + " Percent Changes today!"
-			wanted = main.sorties.getPer_change()
-		elif desire == "Cur_price":
-			message += str(num) + " Current Prices today!"
-			wanted = main.sorties.getCur_price()
-		else:
-			print("Need a new DESIRE please")
-			return
-		print(message)
-		while num:
-			print(str(wanted[start]))
-			num -= 1
-			start += changer
-
 	# Getting some stock symbols from the package
 	#def get_names():
 	#	keep = True
@@ -425,4 +480,5 @@ class myThread (threading.Thread):
 
 if __name__ == "__main__":
 	test = main()
-	main.checking_day_storage()
+	main.check_sort(1980, 3, -1, "Per_change", "05/24/2020")
+	print(main.specified_stock("riansian", "05/24/2020"))
