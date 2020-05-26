@@ -150,12 +150,12 @@ class main:
 	def update_watchlist():
 		main.fast_update(main.user_tracks)
 
+	# Deletes stocks from user_tracks
 	def stop_watching(abbrv):
 		try:
 			main.user_tracks.remove(abbrv)
 		except ValueError:
 			print("You already aren't watching " + abbrv)
-
 
 	#################### HELPER FUNCTIONS ####################
 
@@ -480,5 +480,4 @@ class myThread (threading.Thread):
 
 if __name__ == "__main__":
 	test = main()
-	main.check_sort(1980, 3, -1, "Per_change", "05/24/2020")
-	print(main.specified_stock("riansian", "05/24/2020"))
+	main.day_storage()
