@@ -32,7 +32,7 @@ class main:
 	Stocks = {} 						# Main dictionary of all stocks
 	sorties = mySorts([[]],[[]],[[]]) 	# Keeps tracks of the sorts done
 	active = False 						# Change to True for wanting input on system
-	t_num = 5 							# number of threads for updating the system
+	t_num = 10 							# number of threads for updating the system
 	update_num = 0						# FOR DEBUGGING USE OF COUNTING STOCK DATA RETRIEVAL
 	user_tracks = [] 					# Tracks a list of stocks that the user wants
 
@@ -198,24 +198,26 @@ class main:
 
 	# Might add one for name of stock sooo yeah
 	def add_by_abbrv(abbrv, store=True):
-		print(abbrv)
-		link = main.link_begin + abbrv + main.link_ending
-		content = requests.get(link)
-		soup = BeautifulSoup(content.text, "html.parser")
-		if abbrv not in main.Stocks:
-			name = main.get_name(soup)
-			if name == "":
-				name = abbrv
-		else:
-			name = main.Stocks[abbrv].name
-		data = main.get_data(soup)
-		if data != "fail":
+		try:
 			main.update_num += 1
-			addition = stock(name, abbrv, data[0], data[1], data[2], data[3])
-			main.Stocks[addition.nick] = addition
 			print(main.update_num)
-			if store:
-				main.storing()
+			link = main.link_begin + abbrv + main.link_ending
+			content = requests.get(link)
+			soup = BeautifulSoup(content.text, "html.parser")
+			if abbrv not in main.Stocks:
+				name = main.get_name(soup)
+				if name == "":
+					name = abbrv
+			else:
+				name = main.Stocks[abbrv].name
+			data = main.get_data(soup)
+			if data != "fail":
+				addition = stock(name, abbrv, data[0], data[1], data[2], data[3])
+				main.Stocks[addition.nick] = addition
+				if store:
+					main.storing()
+		except:
+			print(abbrv + " Failed to aquire data!")
 
 	def fast_update(stuff=[]):
 		if stuff == []:
@@ -422,9 +424,9 @@ class main:
 
 	# Attempt to check that the day storing is correct
 	def checking_day_storage():
-		#print(str(main.Stocks_day_data.keys()))
-		#print(main.Stocks_day_data["05/24/2020"]["CVX"])
-		main.check_sort(0, 10, 1, "Per_change")
+		print(str(main.Stocks_day_data.keys()))
+		print(main.Stocks_day_data["05/26/2020"]["CVX"])
+		main.check_sort(0, 10, 1, "Per_change", "05/25/2020")
 
 	#Adding stocks from names to the system
 	def add_all():
@@ -480,4 +482,6 @@ class myThread (threading.Thread):
 
 if __name__ == "__main__":
 	test = main()
-	main.day_storage()
+	main.track("SMG")
+
+
