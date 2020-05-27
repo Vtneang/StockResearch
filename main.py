@@ -162,6 +162,14 @@ class main:
 		except ValueError:
 			print("You already aren't watching " + abbrv)
 
+	# Sorts lists by default being the watchlist
+	def sort_watch(data=""):
+		if data == "":
+			main.user_tracks = main.norm_quicksort(main.user_tracks)
+		else:
+			data = main.norm_quicksort(data)
+		main.storing()
+
 	# Helps clear the whole watchlist(user_tracks)
 	def clear_watch():
 		main.user_tracks = []
@@ -188,7 +196,7 @@ class main:
 
 
 	# Get name thru the abbrv link RETURNS a STRING(NAME)
-	def get_name(soup):
+	def get_name(soup, abbrv):
 		try:
 			title = soup.find("div", {"class" : main.stock_name_access}).find_all("h1")
 			name = ""
@@ -198,12 +206,12 @@ class main:
 						name += j + " "
 			return name.strip()
 		except AttributeError:
-			print("Failed name reqs")
+			print("Failed name reqs on " + abbrv)
 			return ""
 
 	# Get's the updated info of a stock by the soup content
 	# RETURNS A LIST: [PRICE, VALUE CHANGE, PERECENT CHANGE, TIME]
-	def get_data(soup):
+	def get_data(soup, abbrv):
 		try:
 			trial = soup.find("div", {"class" : main.stock_data_access}).find_all("span")
 			count = 0
@@ -216,7 +224,7 @@ class main:
 						results.append(j)
 			return results
 		except AttributeError:
-			print("Failed data reqs")
+			print("Failed data reqs on " + abbrv)
 			return "fail"
 
 	def in_list(abbrv):
@@ -235,12 +243,12 @@ class main:
 			content = requests.get(link)
 			soup = BeautifulSoup(content.text, "html.parser")
 			if abbrv not in main.Stocks:
-				name = main.get_name(soup)
+				name = main.get_name(soup, abbrv)
 				if name == "":
 					name = abbrv
 			else:
 				name = main.Stocks[abbrv].name
-			data = main.get_data(soup)
+			data = main.get_data(soup, abbrv)
 			if data != "fail":
 				addition = stock(name, abbrv, data[0], data[1], data[2], data[3])
 				main.Stocks[addition.nick] = addition
@@ -298,8 +306,8 @@ class main:
 				main.user_tracks = pickle.load(user_file)
 				main.gainers = pickle.load(user_file)
 				main.losers = pickle.load(user_file)
-			#with open(main.accs_saved, "rb") as accs_file:
-			#	main.accounts = pickle.load(accs_file)
+			with open(main.accs_saved, "rb") as accs_file:
+				main.accounts = pickle.load(accs_file)
 		except FileNotFoundError:
 			print("Files haven't been made yet")
 
@@ -332,7 +340,7 @@ class main:
 			values.append(key)
 		return main.quicksorter(values)
 
-	# An attempt at quick sorting data!
+	# An attempt at quick sorting data(list of [x, y])!
 	def quicksorter(data):
 		if len(data) <= 1:
 			return data
@@ -351,6 +359,27 @@ class main:
 		real_l = main.quicksorter(left)
 		real_r = main.quicksorter(right)
 		return real_l + keep + real_r
+
+	# Sorts a normal list of symbols by their percent changes
+	def norm_quicksort(data):
+		if len(data) <= 1:
+			return data
+		part_key = data[0]
+		partition = float(main.Stocks[part_key].percent_change.replace("%", ""))
+		left = []
+		right = []
+		middle = []
+		for sym in data:
+			compare = float(main.Stocks[sym].percent_change.replace("%", ""))
+			if compare > partition:
+				right.append(sym)
+			elif compare < partition:
+				left.append(sym)
+			else:
+				middle.append(sym)
+		real_l = main.norm_quicksort(left)
+		real_r = main.norm_quicksort(right)
+		return real_l + middle + real_r
 
 	################### ORGANIZING/ACQUIRING DATA ###################
 	
@@ -386,7 +415,7 @@ class main:
 		message = "Here are the top " + str(num)
 		if desire == "Percent":
 			message += " percent losers currently"
-			data = main.sort("pertcent_change")
+			data = main.sort("percent_change")
 			print(message)
 			main.print_sort(data, num, 0, 1)
 		elif desire == "Price":
@@ -407,12 +436,14 @@ class main:
 			return
 		if desire == "Percent":
 			message += " percent gainers of " + day
+			length = len(data.getPer_change()) - 1
 			print(message)
-			main.print_sort(data.getPer_change(), num, 1980, -1)
+			main.print_sort(data.getPer_change(), num, length, -1)
 		elif desire == "Price":
 			message += " price gainers of " + day
+			length = len(data.getP_change()) - 1
 			print(message)
-			main.print_sort(data.getP_change(), num, 1980, -1)
+			main.print_sort(data.getP_change(), num, length, -1)
 		else:
 			print("Invalid DEISRE!")
 
@@ -422,14 +453,14 @@ class main:
 		message = "Here are the top " + str(num)
 		if desire == "Percent":
 			message += " percent gainers currently"
-			data = main.sort("pertcent_change")
+			data = main.sort("percent_change")
 			print(message)
-			main.print_sort(data, num, 1980, -1)
+			main.print_sort(data, num, len(data) - 1, -1)
 		elif desire == "Price":
 			message += " price gainers currently"
 			data = main.sort("price_change")
 			print(message)
-			main.print_sort(data, num, 1980, -1)
+			main.print_sort(data, num, len(data) - 1, -1)
 		else:
 			print("Invalid DEISRE")
 
@@ -456,13 +487,16 @@ class main:
 		lost = []
 		first, second = main.consecutive_dates()
 		for s in first.keys():
-			stock_1 = first[s]
-			stock_2 = second[s]
-			pert_change_1 = float(stock_1.percent_change.replace("%",""))
-			pert_change_2 = float(stock_2.percent_change.replace("%", ""))
-			if pert_change_1 < 0 and pert_change_2 < 0:
-				keep = [pert_change_1 + pert_change_2, s]
-				lost.append(keep)
+			try:
+				stock_1 = first[s]
+				stock_2 = second[s]
+				pert_change_1 = float(stock_1.percent_change.replace("%",""))
+				pert_change_2 = float(stock_2.percent_change.replace("%", ""))
+				if pert_change_1 < 0 and pert_change_2 < 0:
+					keep = [pert_change_1 + pert_change_2, s]
+					lost.append(keep)
+			except KeyError:
+				print("Not in some of the system: " + s)
 		return main.quicksorter(lost)
 
 	# Returns a sorted list of ["percent", abbrv] of all stocks that gained two days consecutrively.
@@ -470,23 +504,26 @@ class main:
 		lost = []
 		first, second = main.consecutive_dates()
 		for s in first.keys():
-			stock_1 = first[s]
-			stock_2 = second[s]
-			pert_change_1 = float(stock_1.percent_change.replace("%",""))
-			pert_change_2 = float(stock_2.percent_change.replace("%", ""))
-			if pert_change_1 > 0 and pert_change_2 > 0:
-				keep = [pert_change_1 + pert_change_2, s]
-				lost.append(keep)
+			try:
+				stock_1 = first[s]
+				stock_2 = second[s]
+				pert_change_1 = float(stock_1.percent_change.replace("%",""))
+				pert_change_2 = float(stock_2.percent_change.replace("%", ""))
+				if pert_change_1 > 0 and pert_change_2 > 0:
+					keep = [pert_change_1 + pert_change_2, s]
+					lost.append(keep)
+			except KeyError:
+				print("Not in some of the system: " + s)
 		return main.quicksorter(lost)
 
 	# Prints a list of consecutive losers
-	def print_consecutive_losers():
+	def print_consecutive_losers(num=10):
 		losers = main.consecutive_losers()
-		main.print_sort(losers, 10, 0, 1)
+		main.print_sort(losers, num, 0, 1)
 
-	def print_consecutive_gainers():
+	def print_consecutive_gainers(num=10):
 		gainers = main.consecutive_gainers()
-		main.print_sort(gainers, 10, len(gainers) - 1, -1)
+		main.print_sort(gainers, num, len(gainers) - 1, -1)
 
 
 	#################### ACCOUNT SETUP ####################
@@ -522,9 +559,10 @@ class main:
 
 	# Buys a set QUANTITY amount of a stock by the symbol(ABVRV)
 	# For a set account(NAME) for a price per stock(AMOUNT)
-	def account_buy(name, abbrv, quantity, amount):
+	def account_buy(name, abbrv, quantity):
 		try:
 			if main.in_list(abbrv):
+				amount = float(main.Stocks[abbrv].cur_price)
 				main.accounts[name].buy(abbrv, quantity, amount)
 				main.storing()
 			else:
@@ -598,8 +636,6 @@ class main:
 		last = list(main.Stocks_day_data.keys())[length - 1]
 		first = main.Stocks_day_data[now]
 		second = main.Stocks_day_data[last]
-		print(first["HTZ"])
-		print(second["HTZ"])
 
 	#Adding stocks from names to the system
 	def add_all():
@@ -610,13 +646,17 @@ class main:
 				print("Failed to add: " + sym)
 		main.storing()
 
-	# Prints the top NUM of a sorted list DATA
+	# Prints the top NUM of a sorted list DATA of [x,y] (y = stock sym)
 	# Start = starting index, 0 for losers, 1980 for gainers
-	#Changer is 1 or -1 respectively
-	def print_sort(data, num, start, changer):
+	# Changer is 1 or -1 respectively
+	# LOWER_BOUND helps prevent penny stocks to be shown
+	def print_sort(data, num, start, changer, lower_bound=1):
 		while num and start >= 0 and start <= len(data) - 1:
-			print(data[start])
-			num -= 1
+			sym = data[start][1]
+			price = float(main.Stocks[sym].cur_price)
+			if price > lower_bound:
+				print(data[start])
+				num -= 1
 			start += changer
 
 	# Getting some stock symbols from the package
@@ -664,8 +704,8 @@ class myThread (threading.Thread):
 
 if __name__ == "__main__":
 	test = main()
-	main.make_account("Vincent", 5000)
-	main.account_watch("Vincent", "CVX")
-	main.account_watchlist("Vincent")
+	main.print_consecutive_gainers()
+	main.print_consecutive_losers()
+
 
 
