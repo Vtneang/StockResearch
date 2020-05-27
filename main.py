@@ -34,7 +34,9 @@ class main:
 	active = False 						# Change to True for wanting input on system
 	t_num = 10 							# number of threads for updating the system
 	update_num = 0						# FOR DEBUGGING USE OF COUNTING STOCK DATA RETRIEVAL
-	user_tracks = [] 					# Tracks a list of stocks that the user wants
+	user_tracks = []					# Tracks a list of stocks that the user wants
+	gainers = []						# A list of stocks that gained
+	losers = []							# A list of stocks that lost
 
 	# Saving directories/file names
 	storing_dir = os.getcwd() + "/saved_data/"  # Main Storage directory file
@@ -53,13 +55,6 @@ class main:
 		while main.active:
 			action = input("WHAT U WANT? ")
 			main.action_checker(action)
-	# Repr of main
-	def __repr__(self):
-		return "The totally MAssive data class"
-
-	# Str of main
-	def __str__(self):
-		return "Printing data of myself?"
 
 
 	#################### HANDLING COMMANDS ####################
@@ -130,19 +125,23 @@ class main:
 		print("The valid commands are: " + str(main.commands))
 
 	# Prints all abbrevations of stocks the user is tracking
-	def tracking():
+	def tracking(tracker=""):
+		if tracker == "":
+			tracker = main.user_tracks
 		print("You are currently tracking:")
-		for abbrv in main.user_tracks:
+		for abbrv in tracker:
 			print(main.Stocks[abbrv])
 
 	# Adds the abbreviation to user_tracks if it's in the system
-	def track(abbrv):
-		if abbrv in main.user_tracks:
+	def track(abbrv, place=""):
+		if place == "":
+			place = main.user_tracks
+		if abbrv in place:
 			print("Already tracking " + abbrv)
 		elif abbrv not in main.listings():
 			print("That stocks isn't in the system!")
 		else:
-			main.user_tracks.append(abbrv)
+			place.append(abbrv)
 			main.storing()
 			print("Added " + abbrv + " to the watchlist")
 
@@ -156,6 +155,28 @@ class main:
 			main.user_tracks.remove(abbrv)
 		except ValueError:
 			print("You already aren't watching " + abbrv)
+
+	# Helps clear the whole watchlist(user_tracks)
+	def clear_watch():
+		main.user_tracks = []
+		main.storing()
+
+	# Tracks a set NUM of consecutive losers to the LOSERS.
+	def track_losers(num=10):
+		losers = main.consecutive_losers()
+		for i in range(num):
+			main.track(losers[i][1], main.losers)
+		main.storing()
+
+	# Tracks a set NUM of consecutive losers to the GAINERS.
+	def track_gainers(num=10):
+		gainers = main.consecutive_gainers()
+		i = len(gainers) - 1
+		while num > 0:
+			main.track(gainers[i][1], main.gainers)
+			i -= 1
+			num -= 1
+		main.storing()
 
 	#################### HELPER FUNCTIONS ####################
 
@@ -240,6 +261,8 @@ class main:
 			pickle.dump(main.sorties, price_file)
 		with open(main.user_saved, "wb") as user_file:
 			pickle.dump(main.user_tracks, user_file)
+			pickle.dump(main.gainers, user_file)
+			pickle.dump(main.losers, user_file)
 
 	def day_storage():
 		date = datetime.datetime.now().strftime("%m/%d/%Y")
@@ -262,6 +285,8 @@ class main:
 				main.sorties = pickle.load(price_file)
 			with open(main.user_saved, "rb") as user_file:
 				main.user_tracks = pickle.load(user_file)
+				main.gainers = pickle.load(user_file)
+				main.losers = pickle.load(user_file)
 		except FileNotFoundError:
 			print("Files haven't been made yet")
 
@@ -314,49 +339,87 @@ class main:
 		real_r = main.quicksorter(right)
 		return real_l + keep + real_r
 
-
 	################### ORGANIZING/ACQUIRING DATA ###################
 	
 	# Attempts to returns MYSORTS CLASS by checking if DAY is valid
 	# DAY = mm/dd/yyyy format (starting 05/24/2020)
-	def get_by_date(day):
+	def get_by_date(day, attempt=0):
 		try:
 			return main.Sorts_day_data[day]
 		except KeyError:
 			print("Invalid date")
+			return ""
 
-	# Checks the top/bottom amount of stocks of a specified attribute
-	# START: starting index of sort, either 0 or 1980
-	# CHANGER: 1 if 0 == START  or -1 if START == 1980
-	# NUM = number of stocks wanted
-	# Desire = get(P_change, Per_change, Cur_price) from mySorts class
-	# Specified DAY (mm/dd/yyyy) for data retrieval
-	def check_sort(start, num, changer, desire, day):
-		message = "Here is the "
+	# Helps print the top "NUM" losers by either "Price" or "Percent" for a DAY(mm/dd/yyyy)
+	def top_day_losers(day, num=10, desire="Percent"):
+		message = "Here are the top " + str(num)
 		data = main.get_by_date(day)
-		if not data:
+		if data == "":
+			print("Can't get data due to wrong date")
 			return
-		if start == len(main.listings()) - 1:
-			message += "top "
-		elif start == 0:
-			message += "bottom "
-		if desire == "P_change":
-			message += str(num) + " Price Changes today!"
-			wanted = data.getP_change()
-		elif desire == "Per_change":
-			message += str(num) + " Percent Changes today!"
-			wanted = data.getPer_change()
-		elif desire == "Cur_price":
-			message += str(num) + " Current Prices today!"
-			wanted = data.getCur_price()
+		if desire == "Percent":
+			message += " percent losers of " + day
+			print(message)
+			main.print_sort(data.getPer_change(), num, 0, 1)
+		elif desire == "Price":
+			message += " price losers of " + day
+			print(message)
+			main.print_sort(data.getP_change(), num, 0, 1)
 		else:
-			print("Need a new DESIRE please")
+			print("Invalid DEISRE!")
+
+	# Helps find the top "NUM" losers by "Price" or "Percent" currently
+	def cur_day_losers(num=10, desire="Percent"):
+		message = "Here are the top " + str(num)
+		if desire == "Percent":
+			message += " percent losers currently"
+			data = main.sort("pertcent_change")
+			print(message)
+			main.print_sort(data, num, 0, 1)
+		elif desire == "Price":
+			message += " price losers currently"
+			data = main.sort("price_change")
+			print(message)
+			main.print_sort(data, num, 0, 1)
+		else:
+			print("Invalid DEISRE")
+
+
+	# Helps print the top "NUM" gainers of a DAY(mm/dd/yyyy) by "Price" or "Percent"
+	def top_day_gainers(day, num=10, desire="Percent"):
+		message = "Here are the top " + str(num)
+		data = main.get_by_date(day)
+		if data == "":
+			print("Can't get data due to wrong date")
 			return
-		print(message)
-		while num:
-			print(str(wanted[start]))
-			num -= 1
-			start += changer
+		if desire == "Percent":
+			message += " percent gainers of " + day
+			print(message)
+			main.print_sort(data.getPer_change(), num, 1980, -1)
+		elif desire == "Price":
+			message += " price gainers of " + day
+			print(message)
+			main.print_sort(data.getP_change(), num, 1980, -1)
+		else:
+			print("Invalid DEISRE!")
+
+
+	# Helps find the top "NUM" losers by "Price" or "Percent" currently
+	def cur_day_gainers(num=10, desire="Percent"):
+		message = "Here are the top " + str(num)
+		if desire == "Percent":
+			message += " percent gainers currently"
+			data = main.sort("pertcent_change")
+			print(message)
+			main.print_sort(data, num, 1980, -1)
+		elif desire == "Price":
+			message += " price gainers currently"
+			data = main.sort("price_change")
+			print(message)
+			main.print_sort(data, num, 1980, -1)
+		else:
+			print("Invalid DEISRE")
+
 
 	# Returns the specified STOCK on the specified day (mm/dd/yyyy)
 	def specified_stock(abbrv, day): 
@@ -365,6 +428,53 @@ class main:
 			return data[abbrv]
 		except KeyError:
 			print("\nInvalid Stock or Date: Stocks found :")
+
+	# Returns the most recent 2 consecutive days of stocks dictionaries
+	def consecutive_dates():
+		length = len(main.Stocks_day_data.keys()) - 1
+		now = list(main.Stocks_day_data.keys())[length]
+		last = list(main.Stocks_day_data.keys())[length - 1]
+		first = main.Stocks_day_data[now]
+		second = main.Stocks_day_data[last]
+		return first, second
+
+	# Returns a sorted list of ["perecent", abbrv] of all stocks that lost two days consecutively.
+	def consecutive_losers():
+		lost = []
+		first, second = main.consecutive_dates()
+		for s in first.keys():
+			stock_1 = first[s]
+			stock_2 = second[s]
+			pert_change_1 = float(stock_1.percent_change.replace("%",""))
+			pert_change_2 = float(stock_2.percent_change.replace("%", ""))
+			if pert_change_1 < 0 and pert_change_2 < 0:
+				keep = [pert_change_1 + pert_change_2, s]
+				lost.append(keep)
+		return main.quicksorter(lost)
+
+	# Returns a sorted list of ["percent", abbrv] of all stocks that gained two days consecutrively.
+	def consecutive_gainers():
+		lost = []
+		first, second = main.consecutive_dates()
+		for s in first.keys():
+			stock_1 = first[s]
+			stock_2 = second[s]
+			pert_change_1 = float(stock_1.percent_change.replace("%",""))
+			pert_change_2 = float(stock_2.percent_change.replace("%", ""))
+			if pert_change_1 > 0 and pert_change_2 > 0:
+				keep = [pert_change_1 + pert_change_2, s]
+				lost.append(keep)
+		return main.quicksorter(lost)
+
+	# Prints a list of consecutive losers
+	def print_consecutive_losers():
+		losers = main.consecutive_losers()
+		main.print_sort(losers, 10, 0, 1)
+
+	def print_consecutive_gainers():
+		gainers = main.consecutive_gainers()
+		main.print_sort(gainers, 10, len(gainers) - 1, -1)
+
 	#################### DEBUGGING/RANDO STATS STUFF ####################
 
 	# checking for acces to do other stuff
@@ -424,9 +534,14 @@ class main:
 
 	# Attempt to check that the day storing is correct
 	def checking_day_storage():
-		print(str(main.Stocks_day_data.keys()))
-		print(main.Stocks_day_data["05/26/2020"]["CVX"])
-		main.check_sort(0, 10, 1, "Per_change", "05/25/2020")
+		print(main.Stocks_day_data.keys())
+		length = len(main.Stocks_day_data.keys()) - 1
+		now = list(main.Stocks_day_data.keys())[length]
+		last = list(main.Stocks_day_data.keys())[length - 1]
+		first = main.Stocks_day_data[now]
+		second = main.Stocks_day_data[last]
+		print(first["HTZ"])
+		print(second["HTZ"])
 
 	#Adding stocks from names to the system
 	def add_all():
@@ -436,6 +551,15 @@ class main:
 			except:
 				print("Failed to add: " + sym)
 		main.storing()
+
+	# Prints the top NUM of a sorted list DATA
+	# Start = starting index, 0 for losers, 1980 for gainers
+	#Changer is 1 or -1 respectively
+	def print_sort(data, num, start, changer):
+		while num and start >= 0 and start <= len(data) - 1:
+			print(data[start])
+			num -= 1
+			start += changer
 
 	# Getting some stock symbols from the package
 	#def get_names():
@@ -482,6 +606,6 @@ class myThread (threading.Thread):
 
 if __name__ == "__main__":
 	test = main()
-	main.track("SMG")
+	main.tracking(main.gainers)
 
 
