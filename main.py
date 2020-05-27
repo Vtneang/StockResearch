@@ -1,5 +1,6 @@
 from stuff import stock
 from stuff import mySorts
+from stuff import account
 import urllib.request
 import requests
 from bs4 import BeautifulSoup
@@ -27,6 +28,7 @@ class main:
 	commands = ["add","admin", "check", "listings", "update", "help", "exit", "delete"]
 	admin_comm = ["store"]
 
+	# Data Storage Stuff
 	Stocks_day_data = {} 				# Dictionary keeping track of the date to now
 	Sorts_day_data = {} 				# Dictionary keeping track of sorted data
 	Stocks = {} 						# Main dictionary of all stocks
@@ -38,12 +40,16 @@ class main:
 	gainers = []						# A list of stocks that gained
 	losers = []							# A list of stocks that lost
 
+	# Account data
+	accounts = {}
+
 	# Saving directories/file names
 	storing_dir = os.getcwd() + "/saved_data/"  # Main Storage directory file
 	stocks_saved = storing_dir + "Stocks"		# Storage for stocks in the system
 	other_saved = storing_dir + "Other"			# Storage for end of day stocks/sorting lists
 	sorts_saved = storing_dir + "Sorts"			# Storage for current time sorting
 	user_saved = storing_dir + "User_data"		# Storage for user tracked stocks
+	accs_saved = storing_dir + "Accounts"		# Storage for the accounts made
 
 
 	#################### INITIALIZATION STEPS ####################
@@ -213,6 +219,9 @@ class main:
 			print("Failed data reqs")
 			return "fail"
 
+	def in_list(abbrv):
+		return abbrv in main.listings()
+
 
 	#################### ADDING/STORING DATA ####################
 
@@ -263,6 +272,8 @@ class main:
 			pickle.dump(main.user_tracks, user_file)
 			pickle.dump(main.gainers, user_file)
 			pickle.dump(main.losers, user_file)
+		with open(main.accs_saved, "wb") as account_file:
+			pickle.dump(main.accounts, account_file)
 
 	def day_storage():
 		date = datetime.datetime.now().strftime("%m/%d/%Y")
@@ -287,6 +298,8 @@ class main:
 				main.user_tracks = pickle.load(user_file)
 				main.gainers = pickle.load(user_file)
 				main.losers = pickle.load(user_file)
+			#with open(main.accs_saved, "rb") as accs_file:
+			#	main.accounts = pickle.load(accs_file)
 		except FileNotFoundError:
 			print("Files haven't been made yet")
 
@@ -475,6 +488,51 @@ class main:
 		gainers = main.consecutive_gainers()
 		main.print_sort(gainers, 10, len(gainers) - 1, -1)
 
+
+	#################### ACCOUNT SETUP ####################
+	
+	# Makes a new account
+	def make_account(name, deposit):
+		if name in main.accounts.keys():
+			print("Account already is in the system")
+		else:
+			acc = account(name, deposit)
+			main.accounts[name] = acc
+			main.storing()
+
+	# Adds a stock to an account's watchlist
+	def account_watch(name, abbrv):
+		try:
+			if main.in_list(abbrv):
+				main.accounts[name].watch(abbrv)
+				main.storing()
+			else:
+				print("Stock not in the current system")
+		except KeyError:
+			print("That account is not in the system")
+
+	def account_watchlist(name):
+		try:
+			names = main.accounts[name].watchlist()
+			print("\nHere's " + name + "'s watchlists: ")
+			for s in names:
+				print(main.Stocks[s])
+		except KeyError:
+			print("That account is not in the system")
+
+	# Buys a set QUANTITY amount of a stock by the symbol(ABVRV)
+	# For a set account(NAME) for a price per stock(AMOUNT)
+	def account_buy(name, abbrv, quantity, amount):
+		try:
+			if main.in_list(abbrv):
+				main.accounts[name].buy(abbrv, quantity, amount)
+				main.storing()
+			else:
+				print("That stock isn't in the system")
+		except KeyError:
+			print("That account is not in the system")
+
+
 	#################### DEBUGGING/RANDO STATS STUFF ####################
 
 	# checking for acces to do other stuff
@@ -606,6 +664,8 @@ class myThread (threading.Thread):
 
 if __name__ == "__main__":
 	test = main()
-	main.tracking(main.gainers)
+	main.make_account("Vincent", 5000)
+	main.account_watch("Vincent", "CVX")
+	main.account_watchlist("Vincent")
 
 
