@@ -3,10 +3,10 @@ from stuff import mySorts
 from stuff import account
 import urllib.request
 import requests
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup 			# Needs a Pip install
 import re
-import pickle # Just do frist in first out type of storage?
-from datapackage import Package 
+import pickle 							# Just do frist in first out type of storage?
+from datapackage import Package 		# Needs a Pip install
 import os
 import datetime
 import threading
@@ -704,8 +704,8 @@ class myThread (threading.Thread):
 
 if __name__ == "__main__":
 	test = main()
-	main.print_consecutive_gainers()
-	main.print_consecutive_losers()
+	main.sort_all()
+	main.day_storage()
 
 
 
