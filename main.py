@@ -704,8 +704,6 @@ class myThread (threading.Thread):
 
 if __name__ == "__main__":
 	test = main()
-	main.sort_all()
-	main.day_storage()
-
+	main.print_consecutive_losers()
 
 
