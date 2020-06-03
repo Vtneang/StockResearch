@@ -704,6 +704,10 @@ class myThread (threading.Thread):
 
 if __name__ == "__main__":
 	test = main()
+	main.add_by_abbrv("CBL")
+	main.add_by_abbrv("MIC")
+	main.sort_all()
 	main.day_storage()
+	main.cur_day_losers()
 
 
