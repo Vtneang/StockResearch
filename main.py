@@ -15,6 +15,7 @@ class main:
 
 	# Stock package
 	package = Package('https://datahub.io/core/nyse-other-listings/datapackage.json')
+	nas_pack = Package('https://datahub.io/core/nasdaq-listings/datapackage.json')
 
 	# YAHOO SEARCH LINKS TO HELP FOR SEARCHING!
 	link_begin = "https://finance.yahoo.com/quote/"
@@ -36,6 +37,7 @@ class main:
 	active = False 						# Change to True for wanting input on system
 	t_num = 10 							# number of threads for updating the system
 	update_num = 0						# FOR DEBUGGING USE OF COUNTING STOCK DATA RETRIEVAL
+	failed = []							# Tracks the symbols of stocks that failed data retrieval
 	user_tracks = []					# Tracks a list of stocks that the user wants
 	gainers = []						# A list of stocks that gained
 	losers = []							# A list of stocks that lost
@@ -206,6 +208,7 @@ class main:
 						name += j + " "
 			return name.strip()
 		except AttributeError:
+			main.failed.append(abbrv)
 			print("Failed name reqs on " + abbrv)
 			return ""
 
@@ -224,6 +227,7 @@ class main:
 						results.append(j)
 			return results
 		except AttributeError:
+			main.failed,append(abbrv)
 			print("Failed data reqs on " + abbrv)
 			return "fail"
 
@@ -255,8 +259,10 @@ class main:
 				if store:
 					main.storing()
 		except:
+			main.failed.append(abbrv)
 			print(abbrv + " Failed to aquire data!")
 
+	# Updates every stock in listings.
 	def fast_update(stuff=[]):
 		if stuff == []:
 			stuff = main.listings()
@@ -267,7 +273,17 @@ class main:
 			t.start()
 		for t_wait in threads:
 			t_wait.join()
+		print(len(main.failed))
 		main.storing()
+
+	def safe_update():
+		redo = main.failed
+		main.failed = []
+		if len(redo) == 0:
+			print("Finished update")
+		else:
+			print("Redoing some updates")
+			main.fast_update(redo)
 
 	# Attempt to store data as a file
 	def storing():
@@ -653,22 +669,25 @@ class main:
 	def print_sort(data, num, start, changer, lower_bound=1):
 		while num and start >= 0 and start <= len(data) - 1:
 			sym = data[start][1]
-			price = float(main.Stocks[sym].cur_price)
+			stock = main.Stocks[sym]
+			price = float(stock.cur_price)
 			if price > lower_bound:
 				print(data[start])
 				num -= 1
 			start += changer
 
 	# Getting some stock symbols from the package
-	#def get_names():
-	#	keep = True
-	#	for resource in main.package.resources:
-	#		if resource.descriptor['datahub']['type'] == 'derived/csv' and keep:
-	#			data = resource.read()
-	#			keep = False
-	#			for stock in data:
-	#				if stock[0].isalpha():
-	#					main.names.append(stock[0])
+	def get_names():
+		keep = True
+		for resource in main.nas_pack.resources:
+			if resource.descriptor['datahub']['type'] == 'derived/csv' and keep:
+				data = resource.read()
+				keep = False
+				nasdaq = []
+				for stock in data:
+					if stock[0].isalpha():
+						nasdaq.append(stock[0])
+				main.fast_update(nasdaq)
 
 	# Get's rid of names of stocks not STOCKS
 	#def filter_names():
@@ -704,10 +723,5 @@ class myThread (threading.Thread):
 
 if __name__ == "__main__":
 	test = main()
-	main.add_by_abbrv("CBL")
-	main.add_by_abbrv("MIC")
-	main.sort_all()
-	main.day_storage()
-	main.cur_day_losers()
-
+	main.get_names()
 
