@@ -10,6 +10,8 @@ from datapackage import Package 		# Needs a Pip install
 import os
 import datetime
 import threading
+import random
+import time
 
 class main:
 
@@ -35,7 +37,7 @@ class main:
 	Stocks = {} 						# Main dictionary of all stocks
 	sorties = mySorts([[]],[[]],[[]]) 	# Keeps tracks of the sorts done
 	active = False 						# Change to True for wanting input on system
-	t_num = 10 							# number of threads for updating the system
+	t_num = 20 							# number of threads for updating the system
 	update_num = 0						# FOR DEBUGGING USE OF COUNTING STOCK DATA RETRIEVAL
 	failed = []							# Tracks the symbols of stocks that failed data retrieval
 	user_tracks = []					# Tracks a list of stocks that the user wants
@@ -251,6 +253,7 @@ class main:
 				if name == "":
 					name = abbrv
 			else:
+				return
 				name = main.Stocks[abbrv].name
 			data = main.get_data(soup, abbrv)
 			if data != "fail":
@@ -275,6 +278,7 @@ class main:
 			t_wait.join()
 		print(len(main.failed))
 		main.storing()
+		main.safe_update()
 
 	def safe_update():
 		redo = main.failed
@@ -679,14 +683,15 @@ class main:
 	# Getting some stock symbols from the package
 	def get_names():
 		keep = True
-		for resource in main.nas_pack.resources:
+		for resource in main.package.resources:
 			if resource.descriptor['datahub']['type'] == 'derived/csv' and keep:
 				data = resource.read()
 				keep = False
 				nasdaq = []
 				for stock in data:
-					if stock[0].isalpha():
+					if stock[0].isalpha() and not main.in_list(stock[0]):
 						nasdaq.append(stock[0])
+				print(len(nasdaq))
 				main.fast_update(nasdaq)
 
 	# Get's rid of names of stocks not STOCKS
@@ -705,6 +710,7 @@ class myThread (threading.Thread):
 
 	def __init__(self, threadID, listings):
 		threading.Thread.__init__(self)
+		self.delay = random.randint(0, 2) + random.random()
 		self.ID = threadID
 		self.listings = listings
 
@@ -717,6 +723,7 @@ class myThread (threading.Thread):
 			stock = self.listings[count]
 			main.add_by_abbrv(stock, False)
 			count += main.t_num
+			time.sleep(self.delay)
 		print("Ending Thread: " + str(self.ID))
 
 ############ TESTING COMMANDS ###########
@@ -724,4 +731,3 @@ class myThread (threading.Thread):
 if __name__ == "__main__":
 	test = main()
 	main.get_names()
-

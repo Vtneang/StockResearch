@@ -1,9 +1,6 @@
-import datetime
+import time
 
-x = datetime.datetime.now().strftime("%m/%d/%Y")
-print(x)
-y = int(x[3:5]) - 1
-z = x[0:2]
-year = x[6:]
-yes = z + "/" + str(y) + "/" + year
-print(yes)
+print(5)
+print(4)
+time.sleep(5)
+print(3)
