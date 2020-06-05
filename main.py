@@ -283,7 +283,6 @@ class main:
 			t_wait.join()
 		print(len(main.failed))
 		main.storing()
-		time.sleep(10)
 		main.safe_update()
 
 	def safe_update():
@@ -292,6 +291,7 @@ class main:
 		if len(redo) == 0:
 			print("Finished update")
 		else:
+			time.sleep(10)
 			print("Redoing some updates")
 			main.fast_update(redo)
 
@@ -709,7 +709,7 @@ class main:
 
 class myThread (threading.Thread):
 
-	max_t = 9
+	max_t = 12
 	min_t = 2
 
 	def __init__(self, threadID, listings):
@@ -739,4 +739,6 @@ class myThread (threading.Thread):
 
 if __name__ == "__main__":
 	test = main()
-	main.fast_update()
+	main.sort_all()
+	main.day_storage()
+	main.cur_day_losers()
