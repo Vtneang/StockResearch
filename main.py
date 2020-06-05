@@ -40,6 +40,7 @@ class main:
 	active = False 						# Change to True for wanting input on system
 	t_num = 25							# number of threads for updating the system
 	t_active = 0						# number of threads still active
+	reduced = False						# Tells if the timer to search has been reduced
 	update_num = 0						# FOR DEBUGGING USE OF COUNTING STOCK DATA RETRIEVAL
 	failed = []							# Tracks the symbols of stocks that failed data retrieval
 	user_tracks = []					# Tracks a list of stocks that the user wants
@@ -290,6 +291,7 @@ class main:
 		main.failed = []
 		if len(redo) == 0:
 			print("Finished update")
+			main.reduced = False
 		else:
 			time.sleep(10)
 			print("Redoing some updates")
@@ -730,10 +732,11 @@ class myThread (threading.Thread):
 			main.add_by_abbrv(stock, False)
 			count += main.t_num
 		print("Ending Thread: " + str(self.ID))
-		main.t_active += 1
-		if main.t_active <= main.t_num / 2:
-			print("reducing delay max time")
+		main.t_active -= 1
+		if (main.t_active <= (main.t_num / 2) + 1) and not main.reduced:
+			print("Reducing delay max time!!!")
 			myThread.max_t = myThread.max_t // 2
+			main.reduced = True
 
 ############ TESTING COMMANDS ###########
 
@@ -741,4 +744,3 @@ if __name__ == "__main__":
 	test = main()
 	main.sort_all()
 	main.day_storage()
-	main.cur_day_losers()
