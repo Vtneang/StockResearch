@@ -11,13 +11,14 @@ import os
 import datetime
 import threading
 import random
+import string
 import time
 
 class main:
 
 	# Stock package
-	package = Package('https://datahub.io/core/nyse-other-listings/datapackage.json')
-	nas_pack = Package('https://datahub.io/core/nasdaq-listings/datapackage.json')
+	#package = Package('https://datahub.io/core/nyse-other-listings/datapackage.json')
+	#nas_pack = Package('https://datahub.io/core/nasdaq-listings/datapackage.json')
 
 	# YAHOO SEARCH LINKS TO HELP FOR SEARCHING!
 	link_begin = "https://finance.yahoo.com/quote/"
@@ -37,7 +38,8 @@ class main:
 	Stocks = {} 						# Main dictionary of all stocks
 	sorties = mySorts([[]],[[]],[[]]) 	# Keeps tracks of the sorts done
 	active = False 						# Change to True for wanting input on system
-	t_num = 20 							# number of threads for updating the system
+	t_num = 25							# number of threads for updating the system
+	t_active = 0						# number of threads still active
 	update_num = 0						# FOR DEBUGGING USE OF COUNTING STOCK DATA RETRIEVAL
 	failed = []							# Tracks the symbols of stocks that failed data retrieval
 	user_tracks = []					# Tracks a list of stocks that the user wants
@@ -229,7 +231,7 @@ class main:
 						results.append(j)
 			return results
 		except AttributeError:
-			main.failed,append(abbrv)
+			main.failed.append(abbrv)
 			print("Failed data reqs on " + abbrv)
 			return "fail"
 
@@ -245,7 +247,8 @@ class main:
 		try:
 			main.update_num += 1
 			print(main.update_num)
-			link = main.link_begin + abbrv + main.link_ending
+			ending = "/".join(random.choice(string.ascii_letters) for x in range(random.randrange(3,8)))
+			link = main.link_begin + abbrv + main.link_ending + ending
 			content = requests.get(link)
 			soup = BeautifulSoup(content.text, "html.parser")
 			if abbrv not in main.Stocks:
@@ -253,7 +256,6 @@ class main:
 				if name == "":
 					name = abbrv
 			else:
-				return
 				name = main.Stocks[abbrv].name
 			data = main.get_data(soup, abbrv)
 			if data != "fail":
@@ -264,6 +266,7 @@ class main:
 		except:
 			main.failed.append(abbrv)
 			print(abbrv + " Failed to aquire data!")
+			time.sleep(random.randrange(2, 4))
 
 	# Updates every stock in listings.
 	def fast_update(stuff=[]):
@@ -271,13 +274,16 @@ class main:
 			stuff = main.listings()
 		threads = []
 		for i in range(main.t_num):
+			#n = len(main.listings())-1-i
 			threads.append(myThread(i, stuff))
 		for t in threads:
 			t.start()
+			time.sleep(.25)
 		for t_wait in threads:
 			t_wait.join()
 		print(len(main.failed))
 		main.storing()
+		time.sleep(10)
 		main.safe_update()
 
 	def safe_update():
@@ -651,11 +657,6 @@ class main:
 	# Attempt to check that the day storing is correct
 	def checking_day_storage():
 		print(main.Stocks_day_data.keys())
-		length = len(main.Stocks_day_data.keys()) - 1
-		now = list(main.Stocks_day_data.keys())[length]
-		last = list(main.Stocks_day_data.keys())[length - 1]
-		first = main.Stocks_day_data[now]
-		second = main.Stocks_day_data[last]
 
 	#Adding stocks from names to the system
 	def add_all():
@@ -708,26 +709,37 @@ class main:
 
 class myThread (threading.Thread):
 
+	max_t = 8
+	min_t = 2
+
 	def __init__(self, threadID, listings):
 		threading.Thread.__init__(self)
-		self.delay = random.randint(0, 2) + random.random()
 		self.ID = threadID
 		self.listings = listings
+		main.t_active += 1
 
 	# STORAGE is the list of all abbrvs in main.stocks
 	# Helps run each thread to match it's own ID
 	def run(self):
 		print("Starting Thread " + str(self.ID))
 		count = self.ID
-		while count < len(self.listings):
+		while count < len(main.listings()):
+			delay = random.randint(myThread.min_t, myThread.max_t) + random.random()
+			time.sleep(delay)
 			stock = self.listings[count]
 			main.add_by_abbrv(stock, False)
-			count += main.t_num
-			time.sleep(self.delay)
+			count -= main.t_num
 		print("Ending Thread: " + str(self.ID))
+		main.t_active += 1
+		if main.t_active <= main.t_num / 2:
+			print("reducing delay max time")
+			myThread.max_t = myThread.max_t // 2
 
 ############ TESTING COMMANDS ###########
 
 if __name__ == "__main__":
 	test = main()
-	main.get_names()
+	main.sort_all()
+	main.day_storage()
+	main.cur_day_losers()
+
