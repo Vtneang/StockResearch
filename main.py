@@ -709,7 +709,7 @@ class main:
 
 class myThread (threading.Thread):
 
-	max_t = 8
+	max_t = 9
 	min_t = 2
 
 	def __init__(self, threadID, listings):
@@ -723,12 +723,12 @@ class myThread (threading.Thread):
 	def run(self):
 		print("Starting Thread " + str(self.ID))
 		count = self.ID
-		while count < len(main.listings()):
+		while count < len(self.listings):
 			delay = random.randint(myThread.min_t, myThread.max_t) + random.random()
 			time.sleep(delay)
 			stock = self.listings[count]
 			main.add_by_abbrv(stock, False)
-			count -= main.t_num
+			count += main.t_num
 		print("Ending Thread: " + str(self.ID))
 		main.t_active += 1
 		if main.t_active <= main.t_num / 2:
@@ -739,7 +739,4 @@ class myThread (threading.Thread):
 
 if __name__ == "__main__":
 	test = main()
-	main.sort_all()
-	main.day_storage()
-	main.cur_day_losers()
-
+	main.fast_update()
