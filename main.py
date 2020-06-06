@@ -279,7 +279,7 @@ class main:
 			threads.append(myThread(i, stuff))
 		for t in threads:
 			t.start()
-			time.sleep(.25)
+			time.sleep(.35)
 		for t_wait in threads:
 			t_wait.join()
 		print(len(main.failed))
@@ -727,9 +727,9 @@ class myThread (threading.Thread):
 		count = self.ID
 		while count < len(self.listings):
 			delay = random.randint(myThread.min_t, myThread.max_t) + random.random()
-			time.sleep(delay)
 			stock = self.listings[count]
 			main.add_by_abbrv(stock, False)
+			time.sleep(delay)
 			count += main.t_num
 		print("Ending Thread: " + str(self.ID))
 		main.t_active -= 1
@@ -742,5 +742,4 @@ class myThread (threading.Thread):
 
 if __name__ == "__main__":
 	test = main()
-	main.sort_all()
-	main.day_storage()
+	main.check_stock("CVX")
