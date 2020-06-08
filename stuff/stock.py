@@ -9,8 +9,11 @@ class stock:
 		self.name = name
 		self.nick = abbrv
 		self.cur_price = price
+		self.cur_price.replace(",", "")
 		self.percent_change = percent
+		self.percent_change.replace(",", "")
 		self.price_change = diff
+		self.price_change.replace(",", "")
 		self.updated = time + " EST " + datetime.datetime.now().strftime("%m/%d/%Y")
 
 	def __repr__(self):

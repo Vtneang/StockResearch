@@ -28,6 +28,13 @@ class main:
 	stock_float_pattern = "[-+]?\d*\.?\d*%?$"
 	stock_time_pattern = "\d+:\d*"+ "(AM|PM)$"
 
+	# GOOGLE SEARCH LINKS
+	goog_begin = "https://www.google.com/search?q="
+	goog_mid = "+stocks&rlz="
+	goog_end = "=chrome"
+	time_stamp_class = "ZINbbc xpd O9g5cc uUPGi"
+	goog_error = 0
+
 	# LIST OF COMMANDS
 	commands = ["add","admin", "check", "listings", "update", "help", "exit", "delete"]
 	admin_comm = ["store"]
@@ -269,6 +276,55 @@ class main:
 			print(abbrv + " Failed to aquire data!")
 			time.sleep(random.randrange(2, 4))
 
+	# Attempt 1 at finding stuff through google search
+	def google_search(abbrv):
+		main.update_num += 1
+		print(main.update_num)
+		after_mid = "".join(random.choice(string.ascii_letters) for x in range(random.randrange(3,8)))
+		link = main.goog_begin + abbrv + main.goog_mid + after_mid + main.goog_end
+		req = requests.get(link)
+		souper = BeautifulSoup(req.text, "html.parser")
+		content = souper.find("body").find_all("div", {"class", main.time_stamp_class})
+		try:
+			wanted = content[1].text.split()
+			name = ""
+			wanted_pos = 0
+			count = 0
+			for i in wanted:
+				if i == "/":
+					name.strip()
+					wanted_pos = count + 2
+					break
+				name += i + " "
+				count += 1
+			price = wanted[wanted_pos][5:]
+			wanted_pos += 1
+			price_change = wanted[wanted_pos]
+			wanted_pos += 1
+			perecent = price_change[0]
+			total_percent = wanted[wanted_pos]
+			for j in range(1, len(total_percent)):
+				if total_percent[j] == ")":
+					perecent.strip()
+					break
+				perecent += total_percent[j]
+			time = wanted[-9] + wanted[-8]
+			price.replace(",", "")
+			price_change.replace(",", "")
+			perecent.replace(",", "")
+			try:
+				trial = float(price)
+			except ValueError:
+				print(abbrv + " has no good Price found")
+			print("\n" + name)
+			print(price)
+			print(price_change)
+			print(perecent)
+			print(time + "\n")
+		except Exception as e:
+			main.goog_error += 1
+			print("\n" + abbrv + " had an error in something " + str(e) + "\n")
+
 	# Updates every stock in listings.
 	def fast_update(stuff=[]):
 		if stuff == []:
@@ -295,6 +351,7 @@ class main:
 		else:
 			time.sleep(10)
 			print("Redoing some updates")
+			main.t_num = min(len(redo), main.t_num)
 			main.fast_update(redo)
 
 	# Attempt to store data as a file
@@ -729,6 +786,7 @@ class myThread (threading.Thread):
 			delay = random.randint(myThread.min_t, myThread.max_t) + random.random()
 			stock = self.listings[count]
 			main.add_by_abbrv(stock, False)
+			#main.google_search(stock)
 			time.sleep(delay)
 			count += main.t_num
 		print("Ending Thread: " + str(self.ID))
@@ -742,4 +800,6 @@ class myThread (threading.Thread):
 
 if __name__ == "__main__":
 	test = main()
-	main.check_stock("CVX")
+	main.fast_update()
+	main.sort_all()
+	main.day_storage()
