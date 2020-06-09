@@ -1,6 +1,6 @@
 from stuff import stock
-from stuff import mySorts
-from stuff import account
+from stuff import mySorts 				# Needs to have the __init__.py in folder of these imports
+from stuff import account 				# Also needs to have a direct python path to this file
 import urllib.request
 import requests
 from bs4 import BeautifulSoup 			# Needs a Pip install
@@ -23,6 +23,7 @@ class main:
 	# YAHOO SEARCH LINKS TO HELP FOR SEARCHING!
 	link_begin = "https://finance.yahoo.com/quote/"
 	link_ending = "?ltr=1"
+	another_end = "&.tsrc=fin-srch"								# abrv?p=abbrv + this
 	stock_data_access = "My(6px) Pos(r) smartphone_Mt(6px)"
 	stock_name_access = "Mt(15px)"
 	stock_float_pattern = "[-+]?\d*\.?\d*%?$"
@@ -209,6 +210,19 @@ class main:
 	#################### HELPER FUNCTIONS ####################
 
 
+	def get_link(abbrv):
+		link = main.link_begin + abbrv
+		x = random.randrange(0, 2)
+		if x == 0:
+			end = "/".join(random.choice(string.ascii_letters) for x in range(random.randrange(3,10)))
+			link += main.link_ending + end
+			return link
+		else:
+			end = "?p=" + abbrv + main.another_end
+			link += end
+			return link
+
+
 	# Get name thru the abbrv link RETURNS a STRING(NAME)
 	def get_name(soup, abbrv):
 		try:
@@ -254,9 +268,8 @@ class main:
 	def add_by_abbrv(abbrv, store=True):
 		try:
 			main.update_num += 1
-			print(main.update_num)
-			ending = "/".join(random.choice(string.ascii_letters) for x in range(random.randrange(3,8)))
-			link = main.link_begin + abbrv + main.link_ending + ending
+			print(str(main.update_num) + " - " + abbrv)
+			link = main.get_link(abbrv)
 			content = requests.get(link)
 			soup = BeautifulSoup(content.text, "html.parser")
 			if abbrv not in main.Stocks:
@@ -271,9 +284,9 @@ class main:
 				main.Stocks[addition.nick] = addition
 				if store:
 					main.storing()
-		except:
+		except Exception as e:
 			main.failed.append(abbrv)
-			print(abbrv + " Failed to aquire data!")
+			print(abbrv + " Failed to aquire data!\n" + "Because " + e)
 			time.sleep(random.randrange(2, 4))
 
 	# Attempt 1 at finding stuff through google search
@@ -791,7 +804,7 @@ class myThread (threading.Thread):
 			count += main.t_num
 		print("Ending Thread: " + str(self.ID))
 		main.t_active -= 1
-		if (main.t_active <= (main.t_num / 2) + 1) and not main.reduced:
+		if (main.t_active <= (main.t_num // 1.5) + 1) and not main.reduced:
 			print("Reducing delay max time!!!")
 			myThread.max_t = myThread.max_t // 2
 			main.reduced = True

@@ -1,6 +1,6 @@
 import time
+import random
 
-print(5)
-print(4)
-time.sleep(5)
-print(3)
+while True:
+	x = random.randrange(0, 2)
+	print(x)
