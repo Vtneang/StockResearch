@@ -46,7 +46,7 @@ class main:
 	Stocks = {} 						# Main dictionary of all stocks
 	sorties = mySorts([[]],[[]],[[]]) 	# Keeps tracks of the sorts done
 	active = False 						# Change to True for wanting input on system
-	t_num = 30							# number of threads for updating the system
+	t_num = 28							# number of threads for updating the system
 	t_active = 0						# number of threads still active
 	reduced = False						# Tells if the timer to search has been reduced
 	update_num = 0						# FOR DEBUGGING USE OF COUNTING STOCK DATA RETRIEVAL
@@ -286,7 +286,7 @@ class main:
 					main.storing()
 		except Exception as e:
 			main.failed.append(abbrv)
-			print(abbrv + " Failed to aquire data!\n" + "Because " + e)
+			print(abbrv + " Failed to aquire data!\n" + "Because " + str(e))
 			time.sleep(random.randrange(2, 4))
 
 	# Attempt 1 at finding stuff through google search
@@ -814,3 +814,5 @@ class myThread (threading.Thread):
 if __name__ == "__main__":
 	test = main()
 	main.fast_update()
+	main.sort_all()
+	main.day_storage()
