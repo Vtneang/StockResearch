@@ -36,6 +36,12 @@ class main:
 	time_stamp_class = "ZINbbc xpd O9g5cc uUPGi"
 	goog_error = 0
 
+	# PROXY GATHERING
+	proxy_link = "https://free-proxy-list.net/"
+	proxies = []
+	safe_proxies = []
+
+
 	# LIST OF COMMANDS
 	commands = ["add","admin", "check", "listings", "update", "help", "exit", "delete"]
 	admin_comm = ["store"]
@@ -46,7 +52,7 @@ class main:
 	Stocks = {} 						# Main dictionary of all stocks
 	sorties = mySorts([[]],[[]],[[]]) 	# Keeps tracks of the sorts done
 	active = False 						# Change to True for wanting input on system
-	t_num = 28							# number of threads for updating the system
+	t_num = 30							# number of threads for updating the system
 	t_active = 0						# number of threads still active
 	reduced = False						# Tells if the timer to search has been reduced
 	update_num = 0						# FOR DEBUGGING USE OF COUNTING STOCK DATA RETRIEVAL
@@ -242,7 +248,8 @@ class main:
 	# RETURNS A LIST: [PRICE, VALUE CHANGE, PERECENT CHANGE, TIME]
 	def get_data(soup, abbrv):
 		try:
-			trial = soup.find("div", {"class" : main.stock_data_access}).find_all("span")
+			#trial = soup.find("div", {"class" : main.stock_data_access}).find_all("span")
+			trial = soup.find("div", class_=main.stock_data_access).find_all("span")
 			count = 0
 			results = []
 			for i in trial:
@@ -252,9 +259,9 @@ class main:
 						count += 1
 						results.append(j)
 			return results
-		except AttributeError:
+		except Exception as e:
 			main.failed.append(abbrv)
-			print("Failed data reqs on " + abbrv)
+			print("Failed data reqs on " + abbrv + " Because " + str(e))
 			return "fail"
 
 	def in_list(abbrv):
@@ -669,6 +676,51 @@ class main:
 			print("That account is not in the system")
 
 
+	#################### PROXY GATHERING ####################
+
+	# Helps gather a list of availble proxies
+	def proxy_gathering():
+		requ = requests.get(main.proxy_link)
+		soupy = BeautifulSoup(requ.text, "html.parser")
+		content = soupy.select("tr")
+		for i in content:
+			#print(str(i) + "\n")
+			try:
+				if i.find_all("td", class_="hx")[0].text == "yes":
+					main.proxies.append(str(i.find_all("td")[0].text) + ":" + str(i.find_all("td")[1].text))
+			except:
+				# Do nothing
+				x = 4
+
+	# Tests which Proxies can acutally connect to YAHOO
+	def proxy_testing(proxy, abbrv):
+		link = main.link_begin + abbrv + main.link_ending
+		p = {"http": "http://" + proxy, "https": "https://" + proxy}
+		try:
+			content = requests.get(link, proxies=p, timeout=5)
+			soupy = BeautifulSoup(content.text, "html.parser")
+			main.safe_proxies.append(p)
+		except Exception as e:
+			# Do nothing
+			#print(str(proxy) + " Failed")
+			y = 5
+
+	# Starts and runs the proxy threads that test all availble PROXIES
+	def filter_proxies():
+		p_threads = []
+		for i in range(len(main.proxies)):
+			p_threads.append(proxyThread(i))
+		for thread in p_threads:
+			thread.start()
+		for t in p_threads:
+			t.join()
+		print("Finished filtering proxies to " + str(len(main.safe_proxies)))
+
+
+	def test_proxies():
+		main.proxy_gathering()
+		main.filter_proxies()
+
 	#################### DEBUGGING/RANDO STATS STUFF ####################
 
 	# checking for acces to do other stuff
@@ -809,10 +861,21 @@ class myThread (threading.Thread):
 			myThread.max_t = myThread.max_t // 2
 			main.reduced = True
 
+
+class proxyThread (threading.Thread):
+
+	# Have an Id match every thread in MAIN.PROXIES
+	def __init__(self, ID):
+		threading.Thread.__init__(self)
+		self.ID = ID
+
+	def run(self):
+		print("Starting Proxy Thread " + str(self.ID))
+		proxy_num = main.proxies[self.ID]
+		main.proxy_testing(proxy_num, "CVX")
+
 ############ TESTING COMMANDS ###########
 
 if __name__ == "__main__":
 	test = main()
-	main.fast_update()
-	main.sort_all()
-	main.day_storage()
+	main.test_proxies()

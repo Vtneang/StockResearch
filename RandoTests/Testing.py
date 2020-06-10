@@ -17,21 +17,32 @@ requ = requests.get(web)
 soupy = BeautifulSoup(requ.text, "html.parser")
 content = soupy.select("tr")
 for i in content:
-	for j in i.text.split():
-		if re.match(regex_form, j):
-			for pos in range(len(j)):
-				if re.match("[a-z]", j[pos]) or re.match("[A-Z]", j[pos]):
-					proxies.append(j[0:pos])
-					break
-				else:
-					pos += 1
+	#print(str(i) + "\n")
+	try:
+		if i.find_all("td", class_="hx")[0].text == "yes":
+			proxies.append(str(i.find_all("td")[0].text) + ":" + str(i.find_all("td")[1].text))
+	except:
+		c = ""
 
 
 def fake_search(abbrv):
 	link = link_begin + abbrv + link_ending
-	content = requests.get(link, proxies={"http": proxies[1], "https": proxies[1]})
+	for i in range(len(proxies)):
+		prox = proxies[i]
+		try:
+			content = requests.get(link, proxies={"http": "http://" + prox, "https": "https://" + prox}, timeout=2)
+			soupy = BeautifulSoup(content.text, "html.parser")
+			print(str(i) + " had a sucess + " + "\n")
+			print(soupy.text)
+		except Exception as e:
+			print(str(i) + " had a problem " + str(e))
+
+def idk_search(abbrv):
+	link = link_begin + abbrv + link_ending
+	content = requests.get(link, proxies={"http": "http://" + "168.232.188.209:40968", "https": "https://" + "168.232.188.209:40968"})
 	soupy = BeautifulSoup(content)
 	print(soupy.text)
 
-
 fake_search("CVX")
+
+
