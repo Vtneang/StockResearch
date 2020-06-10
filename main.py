@@ -52,7 +52,7 @@ class main:
 	Stocks = {} 						# Main dictionary of all stocks
 	sorties = mySorts([[]],[[]],[[]]) 	# Keeps tracks of the sorts done
 	active = False 						# Change to True for wanting input on system
-	t_num = 30							# number of threads for updating the system
+	t_num = 25							# number of threads for updating the system
 	t_active = 0						# number of threads still active
 	reduced = False						# Tells if the timer to search has been reduced
 	update_num = 0						# FOR DEBUGGING USE OF COUNTING STOCK DATA RETRIEVAL
@@ -277,6 +277,7 @@ class main:
 			main.update_num += 1
 			print(str(main.update_num) + " - " + abbrv)
 			link = main.get_link(abbrv)
+			#rando_prox = main.get_safe_proxy()
 			content = requests.get(link)
 			soup = BeautifulSoup(content.text, "html.parser")
 			if abbrv not in main.Stocks:
@@ -293,7 +294,7 @@ class main:
 					main.storing()
 		except Exception as e:
 			main.failed.append(abbrv)
-			print(abbrv + " Failed to aquire data!\n" + "Because " + str(e))
+			print(abbrv + " Failed to aquire data! " + str(rando_prox["http"])+ "\nBecause " + str(e))
 			time.sleep(random.randrange(2, 4))
 
 	# Attempt 1 at finding stuff through google search
@@ -347,6 +348,8 @@ class main:
 
 	# Updates every stock in listings.
 	def fast_update(stuff=[]):
+		#main.test_proxies()								# Helps to gather availble proxies
+		#main.t_num *= len(main.safe_proxies) // 3
 		if stuff == []:
 			stuff = main.listings()
 		threads = []
@@ -702,7 +705,7 @@ class main:
 			main.safe_proxies.append(p)
 		except Exception as e:
 			# Do nothing
-			#print(str(proxy) + " Failed")
+			print(str(proxy) + " Failed")
 			y = 5
 
 	# Starts and runs the proxy threads that test all availble PROXIES
@@ -716,10 +719,9 @@ class main:
 			t.join()
 		print("Finished filtering proxies to " + str(len(main.safe_proxies)))
 
-
-	def test_proxies():
-		main.proxy_gathering()
-		main.filter_proxies()
+	def get_safe_proxy():
+		x = random.randint(0, len(main.safe_proxies) - 1)
+		return main.safe_proxies[x]
 
 	#################### DEBUGGING/RANDO STATS STUFF ####################
 
@@ -819,6 +821,12 @@ class main:
 				print(len(nasdaq))
 				main.fast_update(nasdaq)
 
+	# Just tests how many safe proxies are gathered
+	def test_proxies():
+		main.proxy_gathering()
+		main.filter_proxies()
+
+
 	# Get's rid of names of stocks not STOCKS
 	#def filter_names():
 	#	new_names = []
@@ -873,9 +881,11 @@ class proxyThread (threading.Thread):
 		print("Starting Proxy Thread " + str(self.ID))
 		proxy_num = main.proxies[self.ID]
 		main.proxy_testing(proxy_num, "CVX")
+		print("Ending Proxy Thread " + str(self.ID))
 
 ############ TESTING COMMANDS ###########
 
 if __name__ == "__main__":
 	test = main()
-	main.test_proxies()
+	main.cur_day_losers()
+	main.cur_day_gainers()
