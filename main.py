@@ -286,7 +286,7 @@ class main:
 			link = main.get_link(abbrv)
 			rando_prox = main.get_safe_proxy()
 			print(str(main.update_num) + " - " + abbrv + ": " + str(rando_prox["http"]))
-			content = requests.get(link, proxies=rando_prox)
+			content = requests.get(link, proxies=rando_prox, timeout=10)
 			soup = BeautifulSoup(content.text, "html.parser")
 			if abbrv not in main.Stocks:
 				name = main.get_name(soup, abbrv, rando_prox)
@@ -359,12 +359,12 @@ class main:
 	def proxy_update():
 		main.test_proxies()
 		main.cur_prox = main.get_safe_proxy()
+		possible = main.t_num * (len(main.safe_proxies) // 2)
+		main.t_num = max(min(200, possible), 25)
 		main.fast_update()
 
 	# Updates every stock in listings.
 	def fast_update(stuff=[]):
-		possible = main.t_num * (len(main.safe_proxies) // 2)
-		main.t_num = max(min(150, possible), 25)
 		if stuff == []:
 			stuff = main.listings()
 		threads = []
@@ -373,21 +373,22 @@ class main:
 			threads.append(myThread(i, stuff))
 		for t in threads:
 			t.start()
-			time.sleep(.1)
+			time.sleep(.15)
 		for t_wait in threads:
 			t_wait.join()
-		print(len(main.failed))
 		main.storing()
 		myThread.count = 0
 		main.safe_update()
 
 	def safe_update():
+		main.update_num = 0
 		redo = main.failed
 		main.failed = []
 		if len(redo) == 0:
 			print("Finished update")
 			main.reduced = False
 		else:
+			print(len(redo))
 			time.sleep(10)
 			print("Redoing some updates")
 			main.t_num = min(len(redo), main.t_num)
@@ -862,7 +863,7 @@ class main:
 	#	main.storing()
 
 
-################### THREADING CLASS ###################
+################### THREADING CLASSES ###################
 
 class myThread (threading.Thread):
 
@@ -882,7 +883,7 @@ class myThread (threading.Thread):
 		print("Starting Thread " + str(self.ID))
 		while myThread.count < len(self.listings):
 			#delay = random.randint(myThread.min_t, myThread.max_t) + random.random()
-			if main.failed_per_proxy >= 20 and not main.rotated:
+			if main.failed_per_proxy >= 10 and not main.rotated:
 				main.failed_per_proxy = 0
 				main.rotated = True
 				main.update_proxy()
@@ -890,10 +891,10 @@ class myThread (threading.Thread):
 			elif main.rotated:
 				time.sleep(5)
 			else:
-				time.sleep(random.randint(0, 4))
 				stock = self.listings[myThread.count]
 				myThread.count += 1
 				main.add_by_abbrv(stock, False)
+				time.sleep(random.randint(2, 8))
 				#main.google_search(stock)
 				#time.sleep(delay)
 		print("Ending Thread: " + str(self.ID))
@@ -904,6 +905,7 @@ class myThread (threading.Thread):
 		#	main.reduced = True
 
 
+# Helps with gathering new working proxy numbers and stores them in MAIN.PROXIES
 class proxyThread (threading.Thread):
 
 	# Have an Id match every thread in MAIN.PROXIES
