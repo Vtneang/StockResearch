@@ -263,6 +263,7 @@ class main:
 				main.failed_per_proxy += 1
 			main.failed.append(abbrv)
 			print("Failed data reqs on " + abbrv + " Because " + str(e))
+			time.sleep(random.randrange(0, 3))
 			return "fail"
 
 	def in_list(abbrv):
@@ -279,7 +280,7 @@ class main:
 			link = main.get_link(abbrv)
 			rando_prox = main.get_safe_proxy()
 			print(str(main.update_num) + " - " + abbrv + ": " + str(rando_prox["http"]))
-			content = requests.get(link, proxies=rando_prox, timeout=15)
+			content = requests.get(link, proxies=rando_prox, timeout=20)
 			soup = BeautifulSoup(content.text, "html.parser")
 			if abbrv not in main.Stocks:
 				name = main.get_name(soup, abbrv, rando_prox)
@@ -298,13 +299,13 @@ class main:
 				main.failed_per_proxy += 1
 			main.failed.append(abbrv)
 			print(abbrv + " Failed to aquire data! " + str(rando_prox["http"])+ "\nBecause " + str(e))
-			#time.sleep(random.randrange(2, 4))
+			time.sleep(random.randrange(0, 3))
 
 	def proxy_update():
 		main.test_proxies()
 		main.cur_prox = main.get_safe_proxy()
 		possible = main.t_num * (len(main.safe_proxies) // 2)
-		main.t_num = max(min(250, possible), 25)
+		main.t_num = max(min(125, possible), 25)
 		main.fast_update()
 
 	# Updates every stock in listings.
@@ -317,7 +318,7 @@ class main:
 			threads.append(myThread(i, stuff))
 		for t in threads:
 			t.start()
-			time.sleep(.15)
+			time.sleep(.05)
 		for t_wait in threads:
 			t_wait.join()
 		main.storing()
@@ -333,7 +334,7 @@ class main:
 			main.reduced = False
 		else:
 			print(len(redo))
-			time.sleep(10)
+			time.sleep(8)
 			print("Redoing some updates")
 			main.t_num = min(len(redo), main.t_num)
 			main.fast_update(redo)
@@ -688,6 +689,8 @@ class main:
 		print("Updating the Proxy Number!!!")
 		if main.proxy_num >= len(main.safe_proxies) - 1:
 			main.test_proxies()
+			main.proxies = []
+			main.safe_proxies = []
 			main.proxy_num = 0
 		else:
 			main.proxy_num += 1
@@ -774,7 +777,7 @@ class main:
 			stock = main.Stocks[sym]
 			price = float(stock.cur_price)
 			if price > lower_bound:
-				print(data[start])
+				print(stock)
 				num -= 1
 			start += changer
 
@@ -812,8 +815,8 @@ class main:
 
 class myThread (threading.Thread):
 
-	#max_t = 12
-	#min_t = 2
+	max_t = 4
+	min_t = 1
 	count = 0
 
 	def __init__(self, threadID, listings):
@@ -839,10 +842,10 @@ class myThread (threading.Thread):
 				stock = self.listings[myThread.count]
 				myThread.count += 1
 				main.add_by_abbrv(stock, False)
-				if myThread >= len(self.listings):
+				if myThread.count >= len(self.listings):
 					break
 				else:
-					time.sleep(random.randint(3, 12))
+					time.sleep(random.randint(myThread.min_t, myThread.max_t))
 				#main.google_search(stock)
 				#time.sleep(delay)
 		print("Ending Thread: " + str(self.ID))
@@ -871,4 +874,6 @@ class proxyThread (threading.Thread):
 
 if __name__ == "__main__":
 	test = main()
-	main.proxy_update()
+	main.sort_all()
+	main.day_storage()
+	main.cur_day_losers()
