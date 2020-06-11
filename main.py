@@ -283,9 +283,9 @@ class main:
 	def add_by_abbrv(abbrv, store=True):
 		try:
 			main.update_num += 1
-			print(str(main.update_num) + " - " + abbrv)
 			link = main.get_link(abbrv)
 			rando_prox = main.get_safe_proxy()
+			print(str(main.update_num) + " - " + abbrv + ": " + str(rando_prox["http"]))
 			content = requests.get(link, proxies=rando_prox)
 			soup = BeautifulSoup(content.text, "html.parser")
 			if abbrv not in main.Stocks:
@@ -358,8 +358,8 @@ class main:
 
 	def proxy_update():
 		main.test_proxies()
-		main.fast_update()
 		main.cur_prox = main.get_safe_proxy()
+		main.fast_update()
 
 	# Updates every stock in listings.
 	def fast_update(stuff=[]):
@@ -890,6 +890,7 @@ class myThread (threading.Thread):
 			elif main.rotated:
 				time.sleep(5)
 			else:
+				time.sleep(random.randint(0, 4))
 				stock = self.listings[myThread.count]
 				myThread.count += 1
 				main.add_by_abbrv(stock, False)
@@ -920,4 +921,4 @@ class proxyThread (threading.Thread):
 
 if __name__ == "__main__":
 	test = main()
-	main.sort_all()
+	main.proxy_update()
