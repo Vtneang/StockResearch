@@ -23,18 +23,11 @@ class main:
 	# YAHOO SEARCH LINKS TO HELP FOR SEARCHING!
 	link_begin = "https://finance.yahoo.com/quote/"
 	link_ending = "?ltr=1"
-	another_end = "&.tsrc=fin-srch"								# abrv?p=abbrv + this
+	another_end = "&.tsrc=fin-srch"										# abrv?p=abbrv + this
 	stock_data_access = "My(6px) Pos(r) smartphone_Mt(6px)"
 	stock_name_access = "Mt(15px)"
 	stock_float_pattern = "[-+]?\d*\.?\d*%?$"
 	stock_time_pattern = "\d+:\d*"+ "(AM|PM)$"
-
-	# GOOGLE SEARCH LINKS
-	goog_begin = "https://www.google.com/search?q="
-	goog_mid = "+stocks&rlz="
-	goog_end = "=chrome"
-	time_stamp_class = "ZINbbc xpd O9g5cc uUPGi"
-	goog_error = 0
 
 	# PROXY GATHERING
 	proxy_link = "https://free-proxy-list.net/"
@@ -286,7 +279,7 @@ class main:
 			link = main.get_link(abbrv)
 			rando_prox = main.get_safe_proxy()
 			print(str(main.update_num) + " - " + abbrv + ": " + str(rando_prox["http"]))
-			content = requests.get(link, proxies=rando_prox, timeout=10)
+			content = requests.get(link, proxies=rando_prox, timeout=15)
 			soup = BeautifulSoup(content.text, "html.parser")
 			if abbrv not in main.Stocks:
 				name = main.get_name(soup, abbrv, rando_prox)
@@ -307,60 +300,11 @@ class main:
 			print(abbrv + " Failed to aquire data! " + str(rando_prox["http"])+ "\nBecause " + str(e))
 			#time.sleep(random.randrange(2, 4))
 
-	# Attempt 1 at finding stuff through google search
-	def google_search(abbrv):
-		main.update_num += 1
-		print(main.update_num)
-		after_mid = "".join(random.choice(string.ascii_letters) for x in range(random.randrange(3,8)))
-		link = main.goog_begin + abbrv + main.goog_mid + after_mid + main.goog_end
-		req = requests.get(link)
-		souper = BeautifulSoup(req.text, "html.parser")
-		content = souper.find("body").find_all("div", {"class", main.time_stamp_class})
-		try:
-			wanted = content[1].text.split()
-			name = ""
-			wanted_pos = 0
-			count = 0
-			for i in wanted:
-				if i == "/":
-					name.strip()
-					wanted_pos = count + 2
-					break
-				name += i + " "
-				count += 1
-			price = wanted[wanted_pos][5:]
-			wanted_pos += 1
-			price_change = wanted[wanted_pos]
-			wanted_pos += 1
-			perecent = price_change[0]
-			total_percent = wanted[wanted_pos]
-			for j in range(1, len(total_percent)):
-				if total_percent[j] == ")":
-					perecent.strip()
-					break
-				perecent += total_percent[j]
-			time = wanted[-9] + wanted[-8]
-			price.replace(",", "")
-			price_change.replace(",", "")
-			perecent.replace(",", "")
-			try:
-				trial = float(price)
-			except ValueError:
-				print(abbrv + " has no good Price found")
-			print("\n" + name)
-			print(price)
-			print(price_change)
-			print(perecent)
-			print(time + "\n")
-		except Exception as e:
-			main.goog_error += 1
-			print("\n" + abbrv + " had an error in something " + str(e) + "\n")
-
 	def proxy_update():
 		main.test_proxies()
 		main.cur_prox = main.get_safe_proxy()
 		possible = main.t_num * (len(main.safe_proxies) // 2)
-		main.t_num = max(min(200, possible), 25)
+		main.t_num = max(min(250, possible), 25)
 		main.fast_update()
 
 	# Updates every stock in listings.
@@ -748,6 +692,7 @@ class main:
 		else:
 			main.proxy_num += 1
 		main.cur_prox = main.safe_proxies[main.proxy_num]
+		time.sleep(5)
 
 	#################### DEBUGGING/RANDO STATS STUFF ####################
 
@@ -889,12 +834,15 @@ class myThread (threading.Thread):
 				main.update_proxy()
 				main.rotated = False
 			elif main.rotated:
-				time.sleep(5)
+				time.sleep(10)
 			else:
 				stock = self.listings[myThread.count]
 				myThread.count += 1
 				main.add_by_abbrv(stock, False)
-				time.sleep(random.randint(2, 8))
+				if myThread >= len(self.listings):
+					break
+				else:
+					time.sleep(random.randint(3, 12))
 				#main.google_search(stock)
 				#time.sleep(delay)
 		print("Ending Thread: " + str(self.ID))
