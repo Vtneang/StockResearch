@@ -40,6 +40,10 @@ class main:
 	proxy_link = "https://free-proxy-list.net/"
 	proxies = []
 	safe_proxies = []
+	rotated = False
+	failed_per_proxy = 0
+	proxy_num = 0
+	cur_prox = {}
 
 
 	# LIST OF COMMANDS
@@ -230,7 +234,7 @@ class main:
 
 
 	# Get name thru the abbrv link RETURNS a STRING(NAME)
-	def get_name(soup, abbrv):
+	def get_name(soup, abbrv, proxy=None):
 		try:
 			title = soup.find("div", {"class" : main.stock_name_access}).find_all("h1")
 			name = ""
@@ -240,13 +244,15 @@ class main:
 						name += j + " "
 			return name.strip()
 		except AttributeError:
+			if main.cur_prox == proxy:
+				main.failed_per_proxy += 1
 			main.failed.append(abbrv)
 			print("Failed name reqs on " + abbrv)
 			return ""
 
 	# Get's the updated info of a stock by the soup content
 	# RETURNS A LIST: [PRICE, VALUE CHANGE, PERECENT CHANGE, TIME]
-	def get_data(soup, abbrv):
+	def get_data(soup, abbrv, proxy=None):
 		try:
 			#trial = soup.find("div", {"class" : main.stock_data_access}).find_all("span")
 			trial = soup.find("div", class_=main.stock_data_access).find_all("span")
@@ -260,6 +266,8 @@ class main:
 						results.append(j)
 			return results
 		except Exception as e:
+			if main.cur_prox == proxy:
+				main.failed_per_proxy += 1
 			main.failed.append(abbrv)
 			print("Failed data reqs on " + abbrv + " Because " + str(e))
 			return "fail"
@@ -277,25 +285,27 @@ class main:
 			main.update_num += 1
 			print(str(main.update_num) + " - " + abbrv)
 			link = main.get_link(abbrv)
-			#rando_prox = main.get_safe_proxy()
-			content = requests.get(link)
+			rando_prox = main.get_safe_proxy()
+			content = requests.get(link, proxies=rando_prox)
 			soup = BeautifulSoup(content.text, "html.parser")
 			if abbrv not in main.Stocks:
-				name = main.get_name(soup, abbrv)
+				name = main.get_name(soup, abbrv, rando_prox)
 				if name == "":
 					name = abbrv
 			else:
 				name = main.Stocks[abbrv].name
-			data = main.get_data(soup, abbrv)
+			data = main.get_data(soup, abbrv, rando_prox)
 			if data != "fail":
 				addition = stock(name, abbrv, data[0], data[1], data[2], data[3])
 				main.Stocks[addition.nick] = addition
 				if store:
 					main.storing()
 		except Exception as e:
+			if main.cur_prox == rando_prox:
+				main.failed_per_proxy += 1
 			main.failed.append(abbrv)
 			print(abbrv + " Failed to aquire data! " + str(rando_prox["http"])+ "\nBecause " + str(e))
-			time.sleep(random.randrange(2, 4))
+			#time.sleep(random.randrange(2, 4))
 
 	# Attempt 1 at finding stuff through google search
 	def google_search(abbrv):
@@ -346,10 +356,15 @@ class main:
 			main.goog_error += 1
 			print("\n" + abbrv + " had an error in something " + str(e) + "\n")
 
+	def proxy_update():
+		main.test_proxies()
+		main.fast_update()
+		main.cur_prox = main.get_safe_proxy()
+
 	# Updates every stock in listings.
 	def fast_update(stuff=[]):
-		#main.test_proxies()								# Helps to gather availble proxies
-		#main.t_num *= len(main.safe_proxies) // 3
+		possible = main.t_num * (len(main.safe_proxies) // 2)
+		main.t_num = max(min(150, possible), 25)
 		if stuff == []:
 			stuff = main.listings()
 		threads = []
@@ -358,11 +373,12 @@ class main:
 			threads.append(myThread(i, stuff))
 		for t in threads:
 			t.start()
-			time.sleep(.35)
+			time.sleep(.1)
 		for t_wait in threads:
 			t_wait.join()
 		print(len(main.failed))
 		main.storing()
+		myThread.count = 0
 		main.safe_update()
 
 	def safe_update():
@@ -706,7 +722,6 @@ class main:
 		except Exception as e:
 			# Do nothing
 			print(str(proxy) + " Failed")
-			y = 5
 
 	# Starts and runs the proxy threads that test all availble PROXIES
 	def filter_proxies():
@@ -719,9 +734,19 @@ class main:
 			t.join()
 		print("Finished filtering proxies to " + str(len(main.safe_proxies)))
 
+	# Returns a safe proxy number
 	def get_safe_proxy():
-		x = random.randint(0, len(main.safe_proxies) - 1)
-		return main.safe_proxies[x]
+		return main.safe_proxies[main.proxy_num]
+
+	# Starts to get new proxies or update last one
+	def update_proxy():
+		print("Updating the Proxy Number!!!")
+		if main.proxy_num >= len(main.safe_proxies) - 1:
+			main.test_proxies()
+			main.proxy_num = 0
+		else:
+			main.proxy_num += 1
+		main.cur_prox = main.safe_proxies[main.proxy_num]
 
 	#################### DEBUGGING/RANDO STATS STUFF ####################
 
@@ -841,8 +866,9 @@ class main:
 
 class myThread (threading.Thread):
 
-	max_t = 12
-	min_t = 2
+	#max_t = 12
+	#min_t = 2
+	count = 0
 
 	def __init__(self, threadID, listings):
 		threading.Thread.__init__(self)
@@ -854,20 +880,27 @@ class myThread (threading.Thread):
 	# Helps run each thread to match it's own ID
 	def run(self):
 		print("Starting Thread " + str(self.ID))
-		count = self.ID
-		while count < len(self.listings):
-			delay = random.randint(myThread.min_t, myThread.max_t) + random.random()
-			stock = self.listings[count]
-			main.add_by_abbrv(stock, False)
-			#main.google_search(stock)
-			time.sleep(delay)
-			count += main.t_num
+		while myThread.count < len(self.listings):
+			#delay = random.randint(myThread.min_t, myThread.max_t) + random.random()
+			if main.failed_per_proxy >= 20 and not main.rotated:
+				main.failed_per_proxy = 0
+				main.rotated = True
+				main.update_proxy()
+				main.rotated = False
+			elif main.rotated:
+				time.sleep(5)
+			else:
+				stock = self.listings[myThread.count]
+				myThread.count += 1
+				main.add_by_abbrv(stock, False)
+				#main.google_search(stock)
+				#time.sleep(delay)
 		print("Ending Thread: " + str(self.ID))
 		main.t_active -= 1
-		if (main.t_active <= (main.t_num // 1.5) + 1) and not main.reduced:
-			print("Reducing delay max time!!!")
-			myThread.max_t = myThread.max_t // 2
-			main.reduced = True
+		#if (main.t_active <= (main.t_num // 1.5) + 1) and not main.reduced:
+		#	print("Reducing delay max time!!!")
+		#	myThread.max_t = myThread.max_t // 2
+		#	main.reduced = True
 
 
 class proxyThread (threading.Thread):
@@ -887,5 +920,4 @@ class proxyThread (threading.Thread):
 
 if __name__ == "__main__":
 	test = main()
-	main.cur_day_losers()
-	main.cur_day_gainers()
+	main.sort_all()
