@@ -481,18 +481,18 @@ class main:
 			print("Invalid DEISRE!")
 
 	# Helps find the top "NUM" losers by "Price" or "Percent" currently
-	def cur_day_losers(num=10, desire="Percent"):
+	def cur_day_losers(num=10, desire="Percent", bound=1):
 		message = "Here are the top " + str(num)
 		if desire == "Percent":
 			message += " percent losers currently"
 			data = main.sort("percent_change")
 			print(message)
-			main.print_sort(data, num, 0, 1)
+			main.print_sort(data, num, 0, 1, bound)
 		elif desire == "Price":
 			message += " price losers currently"
 			data = main.sort("price_change")
 			print(message)
-			main.print_sort(data, num, 0, 1)
+			main.print_sort(data, num, 0, 1, bound)
 		else:
 			print("Invalid DEISRE")
 
@@ -877,6 +877,6 @@ if __name__ == "__main__":
 	main.proxy_update()
 	main.sort_all()
 	main.day_storage()
-	main.cur_day_losers()
+	main.cur_day_losers(bound=3)
 
 
