@@ -37,6 +37,7 @@ class main:
 	failed_per_proxy = 0
 	proxy_num = 0
 	cur_prox = {}
+	proxing = False
 
 
 	# LIST OF COMMANDS
@@ -278,9 +279,14 @@ class main:
 		try:
 			main.update_num += 1
 			link = main.get_link(abbrv)
-			rando_prox = main.get_safe_proxy()
-			print(str(main.update_num) + " - " + abbrv + ": " + str(rando_prox["http"]))
-			content = requests.get(link, proxies=rando_prox, timeout=20)
+			if main.proxing:
+				rando_prox = main.get_safe_proxy()
+				print(str(main.update_num) + " - " + abbrv + ": " + str(rando_prox["http"]))
+				content = requests.get(link, proxies=rando_prox, timeout=30)
+			else:
+				rando_prox = "No proxy"
+				print(str(main.update_num) + " " + abbrv)
+				content = requests.get(link)
 			soup = BeautifulSoup(content.text, "html.parser")
 			if abbrv not in main.Stocks:
 				name = main.get_name(soup, abbrv, rando_prox)
@@ -305,7 +311,8 @@ class main:
 		main.test_proxies()
 		main.cur_prox = main.get_safe_proxy()
 		possible = main.t_num * (len(main.safe_proxies) // 2)
-		main.t_num = max(min(125, possible), 25)
+		main.t_num = max(min(150, possible), 25)
+		main.proxing = True
 		main.fast_update()
 
 	# Updates every stock in listings.
@@ -815,7 +822,7 @@ class main:
 
 class myThread (threading.Thread):
 
-	max_t = 4
+	max_t = 3
 	min_t = 1
 	count = 0
 
@@ -877,6 +884,8 @@ if __name__ == "__main__":
 	main.proxy_update()
 	main.sort_all()
 	main.day_storage()
-	main.cur_day_losers(bound=3)
+	main.cur_day_losers()
+	#main.print_consecutive_gainers()
+	#main.check_stock("CVX")
 
 
