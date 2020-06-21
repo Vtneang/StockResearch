@@ -884,7 +884,7 @@ if __name__ == "__main__":
 	main.proxy_update()
 	main.sort_all()
 	main.day_storage()
-	main.cur_day_losers()
+	main.cur_day_losers() 
 	#main.print_consecutive_gainers()
 	#main.print_consecutive_losers()
 	#main.check_stock("CVX")
