@@ -658,7 +658,7 @@ class main:
 		for i in content:
 			#print(str(i) + "\n")
 			try:
-				if i.find_all("td", class_="hx")[0].text == "yes":
+				if i.find_all("td", class_="hx")[0].text == "yes" and i.find_all("td")[4].text == "elite proxy":
 					main.proxies.append(str(i.find_all("td")[0].text) + ":" + str(i.find_all("td")[1].text))
 			except:
 				# Do nothing
@@ -695,13 +695,13 @@ class main:
 	def update_proxy():
 		print("Updating the Proxy Number!!!")
 		if main.proxy_num >= len(main.safe_proxies) - 1:
-			main.test_proxies()
 			main.proxies = []
 			main.safe_proxies = []
+			main.test_proxies()
 			main.proxy_num = 0
+			main.cur_prox = main.safe_proxies[main.proxy_num]
 		else:
 			main.proxy_num += 1
-		main.cur_prox = main.safe_proxies[main.proxy_num]
 		time.sleep(5)
 
 	#################### DEBUGGING/RANDO STATS STUFF ####################
@@ -881,12 +881,13 @@ class proxyThread (threading.Thread):
 
 if __name__ == "__main__":
 	test = main()
-	main.proxy_update()
-	main.sort_all()
-	main.day_storage()
-	main.cur_day_losers() 
+	#main.proxy_update()
+	#main.sort_all()
+	#main.day_storage()
+	#main.cur_day_losers(bound=2, desire="Price") 
+	#main.proxy_gathering()
 	#main.print_consecutive_gainers()
-	#main.print_consecutive_losers()
+	main.print_consecutive_losers()
 	#main.check_stock("CVX")
 
 
