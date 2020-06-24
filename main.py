@@ -275,14 +275,18 @@ class main:
 
 
 	# Might add one for name of stock sooo yeah
-	def add_by_abbrv(abbrv, store=True):
+	def add_by_abbrv(abbrv, store=True, redo=False, num=0):
 		try:
-			main.update_num += 1
+			if redo:
+				x = num
+			else:
+				main.update_num += 1
+				x = main.update_num
 			link = main.get_link(abbrv)
 			if main.proxing:
 				rando_prox = main.get_safe_proxy()
-				print(str(main.update_num) + " - " + abbrv + ": " + str(rando_prox["http"]))
-				content = requests.get(link, proxies=rando_prox, timeout=30)
+				content = requests.get(link, proxies=rando_prox, timeout=35)
+				print(str(x) + " - " + abbrv + ": " + str(rando_prox["http"]))
 			else:
 				rando_prox = "No proxy"
 				print(str(main.update_num) + " " + abbrv)
@@ -302,10 +306,12 @@ class main:
 					main.storing()
 		except Exception as e:
 			if main.cur_prox == rando_prox:
+				main.failed.append(abbrv)
+				print(abbrv + " Failed to aquire data! " + str(rando_prox["http"])+ "\nBecause " + str(e))
 				main.failed_per_proxy += 1
-			main.failed.append(abbrv)
-			print(abbrv + " Failed to aquire data! " + str(rando_prox["http"])+ "\nBecause " + str(e))
-			time.sleep(random.randrange(0, 3))
+			else:
+				time.sleep(5)
+				main.add_by_abbrv(abbrv, False, True, x)
 
 	def proxy_update():
 		main.test_proxies()
@@ -689,7 +695,10 @@ class main:
 
 	# Returns a safe proxy number
 	def get_safe_proxy():
-		return main.safe_proxies[main.proxy_num]
+		try:
+			return main.safe_proxies[main.proxy_num]
+		except Exception as e:
+			return "None"
 
 	# Starts to get new proxies or update last one
 	def update_proxy():
@@ -881,13 +890,13 @@ class proxyThread (threading.Thread):
 
 if __name__ == "__main__":
 	test = main()
-	#main.proxy_update()
-	#main.sort_all()
-	#main.day_storage()
-	#main.cur_day_losers(bound=2, desire="Price") 
+	main.proxy_update()
+	main.sort_all()
+	main.day_storage()
+	main.cur_day_losers(bound=2, desire="Price") 
 	#main.proxy_gathering()
 	#main.print_consecutive_gainers()
-	main.print_consecutive_losers()
+	#main.print_consecutive_losers()
 	#main.check_stock("CVX")
 
 
