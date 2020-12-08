@@ -264,7 +264,6 @@ class main:
 				main.failed_per_proxy += 1
 			main.failed.append(abbrv)
 			print("Failed data reqs on " + abbrv + " Because " + str(e))
-			time.sleep(random.randrange(0, 3))
 			return "fail"
 
 	def in_list(abbrv):
@@ -306,18 +305,17 @@ class main:
 					main.storing()
 		except Exception as e:
 			if main.cur_prox == rando_prox:
-				main.failed.append(abbrv)
 				print(abbrv + " Failed to aquire data! " + str(rando_prox["http"])+ "\nBecause " + str(e))
 				main.failed_per_proxy += 1
 			else:
 				time.sleep(5)
-				main.add_by_abbrv(abbrv, False, True, x)
+			main.failed.append(abbrv)
 
 	def proxy_update():
 		main.test_proxies()
 		main.cur_prox = main.get_safe_proxy()
 		possible = main.t_num * (len(main.safe_proxies) // 2)
-		main.t_num = max(min(150, possible), 25)
+		main.t_num = max(min(250, possible), 25)
 		main.proxing = True
 		main.fast_update()
 
@@ -708,9 +706,9 @@ class main:
 			main.safe_proxies = []
 			main.test_proxies()
 			main.proxy_num = 0
-			main.cur_prox = main.safe_proxies[main.proxy_num]
 		else:
 			main.proxy_num += 1
+		main.cur_prox = main.safe_proxies[main.proxy_num]
 		time.sleep(5)
 
 	#################### DEBUGGING/RANDO STATS STUFF ####################
@@ -893,10 +891,12 @@ if __name__ == "__main__":
 	main.proxy_update()
 	main.sort_all()
 	main.day_storage()
-	main.cur_day_losers(bound=2, desire="Price") 
+	main.cur_day_losers(bound=2) 
+	#main.cur_day_gainers()
 	#main.proxy_gathering()
 	#main.print_consecutive_gainers()
 	#main.print_consecutive_losers()
 	#main.check_stock("CVX")
+	#main.checking_day_storage()
 
 
